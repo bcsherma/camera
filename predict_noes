@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""
+predict
+
+Converts one or more pdb files into a graph that contains several
+"""
+
+import json
+import argparse
+import itertools
+import methylphetamine.structures as structures
+
+
+def get_args():
+    """
+    parse script arguments
+    """
+
+    # Create the argument parser
+    parser = argparse.ArgumentParser(description=__doc__.strip())
+
+    # Add arguments to the parser
+    parser.add_argument('files', type=str, nargs='+',
+                        help='pdb files to be used')
+    parser.add_argument('--pror', action='store_true',
+                        help="keep only proR methyls from LEU and VAL")
+    parser.add_argument('--pros', action='store_true',
+                        help="keep only proS methyls from LEU and VAL")
+    parser.add_argument('-o', '--output', type=str, default='')
+    parser.add_argument('--model', type=int, default=0)
+    parser.add_argument('--chain', type=str, default=" ",
+                        help="which chain of the pdb file to use")
+    parser.add_argument('-c', '--colors', nargs='+', type=str,
+                        default=["ILE", "LEU", "VAL"],
+                        help="Which residues to extract methyl from")
+    parser.add_argument('--original', type=str,
+                        help='Orginal structure, if your pdb files are '
+                             'threaded')
+    parser.add_argument('--cross', type=str, default="",
+                        help='Predict chain noes from this additional chain')
+
+    return parser.parse_args()
+
+
+def main():
+    """Main method for this script"""
+    
+    # Parse command line arguments
+    args = get_args()  
+
+    print(f"Reading methyls from pdb file: {args.files[0]}")
+
+    # Get methyls from the first structure
+    methyls = structures.get_methyls(args.files[0], args.colors, args.model,
+                                    args.chain)
+
+    # Filter proR or proS
+    if args.pror:
+        methyls = {m for m in methyls if m.order in {None, 1}}
+
+    if args.pros:
+        methyls = {m for m in methyls if m.order in {None, 2}}
+
+    # Initialize an empty distance table
+    distances = {m: {m2: [] for m2 in methyls if m != m2} for m in methyls}
+
+    for f in args.files:
+
+        print(f"Reading pairwise distances from pdb file: {f}")
+
+        # Get the methyls in here
+        atom_map = structures.get_atoms(f, args.colors, args.model,
+                                       args.chain)
+
+        # Iterate over all pairs of methyls
+        for i, j in itertools.combinations(methyls, 2):
+
+            # Get distance between these
+            d = structures.pairwise_distance(atom_map[i.label],
+                                            atom_map[j.label])
+
+            # Save these distances in table
+            distances[i][j].append(d)
+            distances[j][i].append(d)
+
+    # Turn distances into a list of tuples
+    distances = [(i.label, j.label, sorted(distances[i][j]))
+                 for i, j in itertools.combinations(methyls, 2)]
+
+    # Save output if necessary
+    if args.output:
+        with open(args.output, "w") as outfile:
+
+            # Get methyls as dictionaries
+            vertices = [m.to_dict() for m in methyls]
+
+            # Dump graph to file
+            json.dump({"vertices": vertices, "edges": distances},
+                      outfile, indent=3)
+
+
+# Call main method for the script
+if __name__ == '__main__':
+    main()
