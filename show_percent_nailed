@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""
+show_percent_nailed
+
+Takes a 2D peak list in .csv format as input and print out the percent nailed,
+which is defined as the fraction of vertices which have methyls from a single
+residue as their support set
+"""
+
+import pandas
+import argparse
+import camera.hmqc as hmqc
+
+def get_args():
+    """
+    Parse command line arguments and return the argument namespace
+    """
+
+    parser = argparse.ArgumentParser(description=__doc__.strip())
+    parser.add_argument("hmqc", help="2D spreadsheet")
+    
+    return parser.parse_args()
+
+
+def main():
+    """
+    Main method for the script
+    """
+
+    args = get_args()
+    signatures = hmqc.parse_hmqc_file(args.hmqc)
+
+
+# Run the main method for the script
+if __name__ == "__main__":
+    main()
