@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""
+process_noes
+
+Read in an NOE spreadsheet and determine which NOEs are symmetric and to which
+signatures each NOE passing symmetry can be clustered. This also requires a 2D
+peaklist and a structure, which will be used by the constraint satisfaction
+solver to determine which explanations of the network are reasonable
+"""
+
+import argparse
+import camera.hmqc as hmqc
+import camera.noes as noes
+
+
+def get_args():
+    """
+    Parse command line arguments
+    """
+    
+    # Create a command line argument parser and add arguments to it
+    parser = argparse.ArgumentParser(description=__doc__.strip())
+    parser.add_argument("hmqc", help="2D peak list (.csv)")
+    parser.add_argument("noes", help="NOE spreadsheet (.csv)")
+
+    # Return the command line argument namespace
+    return parser.parse_args()
+
+
+def main():
+    """
+    Main method for the script
+    """
+    
+    # Parse command line arguments for the script
+    args = get_args()
+
+    # Read in list of HMQC signatures
+    signatures = hmqc.parse_hmqc_file(args.hmqc)
+
+    # Read in list of NOEs
+    crosspeaks = noes.parse_noe_file(args.noes)
+
+
+# Run the main method for the script
+if __name__ == "__main__":
+    main()
