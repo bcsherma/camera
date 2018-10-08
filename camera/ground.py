@@ -29,12 +29,16 @@ def check_network(network, structure):
         if 10 < min_radius < float("inf"):
 
             print(f"warning: component cannot satisfy ground truth until "
-                  f"{min_radius:.3f} angstroms")
-
-            print("\t", end="")
+                  f"{min_radius:.3f} angstroms\n")
+            
             for c in component.nodes():
-                print(c, end=" ")
-            print("\n")
+                print(f"\tnode={c} clusters={c.clusters}")
+            print()
+
+            for i, j in component.edges():
+                length = check_edge(i, j, structure)
+                print(f"\tedge=({i}, {j}) min_length={length:.3f}")
+            print()
 
 
 def check_component(component, structure):
