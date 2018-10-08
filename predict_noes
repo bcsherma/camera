@@ -8,7 +8,7 @@ Converts one or more pdb files into a graph that contains several
 import json
 import argparse
 import itertools
-import methylphetamine.structures as structures
+import camera.structures as structures
 
 
 def get_args():
