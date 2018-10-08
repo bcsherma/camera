@@ -6,6 +6,8 @@ formulae for methyl assignment.
 """
 
 import re
+import tqdm
+import random
 import itertools
 import subprocess
 import networkx as nx
@@ -60,6 +62,22 @@ class Formula:
         
         self.nclauses += 1
         self.base_clauses.append(lits)
+
+    def add_aux_clause(self, lits):
+        """
+        Add an auxiliary, i.e. temporary clause to the fomrula
+        """
+
+        self.nclauses += 1
+        self.aux_clauses.append(lits)
+
+    def flush(self):
+        """
+        Remove all auxiliary clauses from the formula
+        """
+
+        self.nclauses = self.nclauses - len(self.aux_clauses)
+        self.aux_clauses = []
 
     def next_variable(self):
         """
@@ -155,9 +173,8 @@ class Formula:
                                  stdout=subprocess.PIPE,
                                  timeout=15)
 
-        # Print out the solution
-        return get_assignments(process.stdout)
-
+        assignments = get_assignments(process.stdout)
+        return [self.variable_meaning[a] for a in assignments if a > 0]
 
 def get_assignments(output):
     """
@@ -226,7 +243,79 @@ class ClusteringCSP(Formula):
         self.create_clustering_variables(network, signatures)
         self.create_activation_variables(network)
         self.respect_matching(network)
+        self.distance_constraints(signatures, network, structure)
+        self.geminal_constraints(signatures, structure)
 
+    def enumerate(self):
+        """
+        Enumerate the support sets for the signatures
+        """
+        
+        # Print out a message
+
+        print("Beginning the enumeration of support sets\n")
+
+        # Localize the assignment variable table
+
+        asgvar = self.assignment_variables
+
+        # Initialize set of all vertices as those which have not had their
+        # support sets fully enumerated
+
+        unfinished = set(asgvar.keys())
+        pbar = tqdm.tqdm(total=len(unfinished))
+
+        # Initialize support sets to be empty
+    
+        support = {u: set() for u in unfinished}
+
+        # Loop until we are done with the enumeration
+
+        while True:
+
+            # If unfinished is now empty, break
+
+            if len(unfinished) == 0:
+
+                # Close the progress bar and leave a newline
+                pbar.close()
+                print()
+
+                # Return the computed support sets
+                return support
+
+            # Select an unfinished vertex at random
+
+            focus = random.sample(unfinished, 1)[0]
+
+            # Force this vertex to take an as yet unseen assignment
+            
+            for seen in support[focus]:
+                self.add_aux_clause([-asgvar[focus][seen]])
+
+            # Run the solver
+
+            result = self.solve()
+            self.flush()  # Delete aux clauses
+
+            if result:
+
+                # Update support sets
+                
+                for vtype, alpha, beta in result:
+
+                    if vtype == Formula.ASG_VAR:
+
+                        support[alpha].add(beta)
+
+            else:
+
+                # We are done with this vertex, so remove it from unfinished
+                # and lock it to its known assignments
+                pbar.update()  
+                unfinished.remove(focus)
+                self.add_clause([asgvar[focus][s] for s in support[focus]])
+                
     def inject_vertices(self, signatures, structure):
         """
         Create assignment variables for each signature-methyl pair such that
@@ -437,9 +526,10 @@ class ClusteringCSP(Formula):
                 # unsatisfied, i.e. conditional on (i,j) being active, i being
                 # clustered to i_c and j being clustered to j_c
 
-                self.respect_distance_constraint(i_c, j_c, structure)
+                self.respect_distance_constraint(i_c, j_c, structure, 
+                                                 base_clause)
 
-    def respect_distance_constraint(alpha, beta, structure, base_clause):
+    def respect_distance_constraint(self, alpha, beta, structure, base_clause):
         """
         Force an edge between alpha and beta (signatures) to be respected,
         conditional on the given base clause being unsatisfiable
@@ -481,4 +571,34 @@ class ClusteringCSP(Formula):
             
             # Add this clause to the formula
             self.add_clause(clause)
+    
+    def geminal_constraints(self, signatures, structure):
+        """
+        Force all geminal pairs of signatures to be assigned to geminal pairs
+        in the structure by every satisfying assignment to the formula
+        """
 
+        # Identify all geminal pairs of signatures
+
+        geminals = {(i, i.geminal) for i in signatures if i.geminal}
+
+        # Iterate over geminals pairs of signatures
+
+        for i, j in geminals:
+
+            # Iterate over the domain of i
+
+            for i_methyl in self.assignment_variables[i]:
+                
+                clause = [-self.assignment_variables[i][i_methyl]]
+                
+                # Should i be assigned to i_methyl, the clause we add
+                # can only be satisfied if j is assigned to the geminal pair
+                # of i_methyl
+
+                for j_methyl in self.assignment_variables[j]:
+                    if i_methyl.geminal(j_methyl):
+                        clause.append(self.assignment_variables[j][j_methyl])
+                
+                # Add this clause to the formula
+                self.add_clause(clause)
