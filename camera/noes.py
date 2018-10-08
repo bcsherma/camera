@@ -48,7 +48,7 @@ class Noe:
             self.type = "HCH"
         
         # Initialize fields that will be filled in later
-        self.cluster = []
+        self.clusters = {}
         self.reciprocal = []
 
     def __repr__(self):
@@ -96,6 +96,38 @@ class Noe:
                     and abs(self.h2 - other.h1) < 0.01
                     and abs(self.c1 - other.c2) < 0.15 
                     and abs(self.c2 - other.c1) < 0.15)
+
+    def set_clusters(self, signatures):
+        """
+        Given a list of signatures, set this Noes clusters field to be all
+        signatures which are within the clustering tolerance of itself
+        """
+        
+        # Reset my list of clusters to be empty
+        self.clusters = {}
+        
+        def clusterable(sig):
+            return (abs(sig.carbon - self.c2) < 0.15 
+                    and abs(sig.hydrogen - self.h2) < 0.02)
+
+        # Filter down to signatures within range
+        signatures = filter(clusterable, signatures) 
+        self.clusters = set(signatures)
+
+
+
+def set_clusters(noes, signatures):
+    """
+    Use the set clusters method of each instance of the Noe class
+    in the given noe list.
+    """
+
+    # Iterate over the set of Noes and set the clusters of the Noe if it has
+    # not already been manually clustered
+
+    for noe in noes:
+        if not noe.clusters:
+            noe.set_clusters(signatures)
 
 
 def parse_noe_file(filename):
