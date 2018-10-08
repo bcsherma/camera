@@ -70,6 +70,26 @@ class Signature:
         return f"signature-{self.label}"
 
 
+def set_assignment(signatures, structure):
+    """
+    Given a list of signatures and a structure, set the assignment and options
+    fields of each signature so that each respectively contains the set of
+    methyls compatible with the given assignment and options from the 
+    CSV file
+    """
+    
+    # Get a set containing the nodes of the structure
+    methyls = set(structure.nodes)
+
+    # Iterate over the signatures in the list
+    for sig in signatures:
+        
+        # Update the assignment and options lists to contain the methyls
+        # with labels in the asg_str and options_str fields respectively
+        sig.asg = {m for m in methyls if m.label in sig.asg_str}
+        sig.options = {m for m in methyls if m.label in sig.option_str}
+
+
 def parse_hmqc_file(filename):
     """
     Given the name of an HMQC CSV file, create a least of Signature objects
