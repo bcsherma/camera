@@ -7,6 +7,7 @@ unsatisfiable. Such edges can be safely removed, which may cause more
 connected components of size 2 to appear
 """
 
+import tqdm
 import halo
 import itertools
 import networkx as nx
@@ -80,6 +81,55 @@ def reduce_symmetrization_graph(network, signatures, structure):
         # Increase the iteration counter
         iteration_no += 1
         print()
+    
+    # Iterate over complex active components and kill edges which cannot be
+    # activate
+
+    clean_components(network, signatures, structure)
+
+
+def clean_components(network, signatures, structure):
+    """
+    Iterate over active complex components of the symmetrization graph and
+    kill all edges whose activation causes the problem to become UNSAT
+    """
+        
+    # Print message
+
+    print("Iterating over active complex components to simplify graph\n")
+
+    # Construct satisfiability formula
+    
+    formula = sat.ClusteringCSP(signatures, network, structure)
+        
+    # Get the active components of the network
+    
+    active = network.active_graph()
+
+    # Iterate over edges of the graph
+
+    for i, j in tqdm.tqdm(active.edges()):
+
+        # If these both have degree 1, then ignore
+        
+        if active.degree(i) == active.degree(j) == 1:
+            continue
+        
+        # Force the edge to be active
+
+        formula.add_aux_clause([formula.activation_variables[i][j]])
+
+        # Run solver, and if the result in UNSAT kill i, j
+
+        if formula.solve():
+            formula.flush()
+
+        else:
+            formula.flush()
+            network.kill(i, j)
+    
+    # Print a newline
+    print()
 
 def test_component(component, network, signatures, structure):
     """
