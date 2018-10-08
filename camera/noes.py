@@ -7,6 +7,7 @@ This file contains an object oriented representation of an NOE, either in
 """
 
 import pandas
+from . import params
 
 
 class Noe:
@@ -103,19 +104,19 @@ class Noe:
             return False
 
         elif self.type == "CCH":
-            return (abs(self.c1 - other.c2) < 0.15 
-                    and abs(self.c2 - other.c1) < 0.15)
+            return (abs(self.c1 - other.c2) < params.SYM_CTOL 
+                    and abs(self.c2 - other.c1) < params.SYM_CTOL)
         
         elif self.type == "HCH":
-            return (abs(self.h1 - other.h2) < 0.01 
-                    and abs(self.h2 - other.h1) < 0.01)
+            return (abs(self.h1 - other.h2) < params.SYM_HTOL 
+                    and abs(self.h2 - other.h1) < params.SYM_HTOL)
         
         # Check for 4D NOE Symmetry, which relies on all coordinates
         else:
-            return (abs(self.h1 - other.h2) < 0.01 
-                    and abs(self.h2 - other.h1) < 0.01
-                    and abs(self.c1 - other.c2) < 0.15 
-                    and abs(self.c2 - other.c1) < 0.15)
+            return (abs(self.h1 - other.h2) < params.SYM_HTOL  
+                    and abs(self.h2 - other.h1) < params.SYM_HTOL
+                    and abs(self.c1 - other.c2) < params.SYM_CTOL 
+                    and abs(self.c2 - other.c1) < params.SYM_CTOL)
 
     def set_clusters(self, signatures):
         """
@@ -127,8 +128,8 @@ class Noe:
         self.clusters = {}
         
         def clusterable(sig):
-            return (abs(sig.carbon - self.c2) < 0.15 
-                    and abs(sig.hydrogen - self.h2) < 0.02)
+            return (abs(sig.carbon - self.c2) < params.CLS_CTOL
+                    and abs(sig.hydrogen - self.h2) < params.CLS_HTOL)
 
         # Filter down to signatures within range
         signatures = filter(clusterable, signatures) 

@@ -11,6 +11,7 @@ import random
 import itertools
 import subprocess
 import networkx as nx
+from . import params
 
 
 # Regular expression for getting assignments from cryptominisat
@@ -303,9 +304,7 @@ class ClusteringCSP(Formula):
                 # Update support sets
                 
                 for vtype, alpha, beta in result:
-
                     if vtype == Formula.ASG_VAR:
-
                         support[alpha].add(beta)
 
             else:
@@ -335,9 +334,19 @@ class ClusteringCSP(Formula):
             # Localize the assignment variable table for this signature
             table = self.assignment_variables[signature]
             
-            # Filter the methyls down to color compatibility
-            domain = filter(lambda m: m.color in signature.color, methyls)
+            # Check for whether we are meant to filter by assignment and
+            # support sets
+
+            if params.FORCE_SV:
+                domain = signature.options
             
+            elif params.FORCE_ASG:
+                domain = signature.asg
+
+            else:
+                # Otherwise, just filter down by color compatiblity
+                domain = filter(lambda m: m.color in signature.color, methyls)
+
             # Create a variable for each methyl in the domain
             for methyl in domain:
 
@@ -565,8 +574,14 @@ class ClusteringCSP(Formula):
                 # If alpha_methyl and beta_methyl are close in the structure,
                 # then allow alpha -> alpha_methyl and beta -> beta_methyl
                 # to satisfy the clause
+                
+                distance = alpha_neighborhood[beta_methyl]["distances"][0]
 
-                if alpha_neighborhood[beta_methyl]["distances"][0] < 10:
+                if alpha_methyl.added or beta_methyl.added:
+                    if distance < params.ADDED_RADIUS:
+                        clause.append(beta_table[beta_methyl])
+                
+                elif distance < params.RADIUS:
                     clause.append(beta_table[beta_methyl])
             
             # Add this clause to the formula
