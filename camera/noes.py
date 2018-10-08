@@ -38,6 +38,7 @@ class Noe:
         self.reciprocal_str = source.get("reciprocal", "").split()
 
         # Determine the type of this NOE
+
         if self.c1 and self.h1:
             self.type = "4D"
 
@@ -47,7 +48,23 @@ class Noe:
         else:
             self.type = "HCH"
         
+        
+        # Check for diagonals 
+
+        if self.type == "CCH":
+            if abs(self.c1 - self.c2) < 0.1:
+                raise Warning
+        
+        elif self.type == "HCH":
+            if abs(self.h1 - self.h2) < 0.01:
+                raise Warning
+
+        elif self.type == "4D":
+            if abs(self.h1 - self.h2) < 0.01 and abs(self.c1 - self.c2) < 0.1:
+                raise Warning
+
         # Initialize fields that will be filled in later
+
         self.clusters = {}
         self.reciprocal = []
 
@@ -139,18 +156,23 @@ def parse_noe_file(filename):
     and return them
     """
 
-    print("Reading NOEs from", filename)
-
     noes = []
     csv = pandas.read_csv(filename)
-    
+    no_diagonals = 0 
+
     for idx, row in csv.iterrows():
+
         try:
             noes.append(Noe(row))
+        
+        except Warning:
+            no_diagonals += 1
+
         except:
             print(f"Invalid NOE definition on line {idx + 1}"
                   f" of {filename}")
 
     # Return the list of Noe objects that we have aggregated
-    print()
+    print(f"Read {len(noes)} Noes from {filename} (excluding {no_diagonals} "
+          f"diagonals)\n")
     return noes
