@@ -63,6 +63,9 @@ class Noe:
         Determine if this NOE and another are equal by comparing their labels
         """
 
+        if not isinstance(other, Noe):
+            return False
+
         return self.label == other.label
 
     def __hash__(self):
