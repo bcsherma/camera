@@ -59,6 +59,7 @@ def load_structure(filename):
         print(f"{colors.count(c):2} methyls of type {c}")
 
     # return the graph
+    print()
     return structure
 
 
