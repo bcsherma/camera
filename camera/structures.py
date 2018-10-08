@@ -18,6 +18,7 @@ def load_structure(filename):
     """
     Load a graphical representation of the structure from a json file
     """
+    print(f"Loading structure from {filename}\n")
 
     # Read in json dictionary
     with open(filename) as infile:

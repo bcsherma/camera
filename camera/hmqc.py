@@ -96,7 +96,7 @@ def parse_hmqc_file(filename):
     and return them
     """
 
-    print("Reading HMQC peaks from", filename)
+    print("Reading HMQC peaks from", filename, "\n")
 
     signatures = []
     csv = pandas.read_csv(filename)
