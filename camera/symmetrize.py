@@ -131,6 +131,7 @@ def clean_components(network, signatures, structure):
     # Print a newline
     print()
 
+
 def test_component(component, network, signatures, structure):
     """
     Iterate over the maximum cardinality matchings of the given component. For
