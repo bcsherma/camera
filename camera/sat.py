@@ -360,7 +360,7 @@ class ClusteringCSP(Formula):
             # As a convention, the left side is the one with fewer vertices.
             # Swap left and right if right has fewer vertices.
 
-            if left.number_of_nodes() > right.number_of_nodes():
+            if len(left) > len(right): 
                 left, right = right, left
 
             # The way we encode the constraint that a maximum cardinality
