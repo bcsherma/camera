@@ -149,4 +149,5 @@ def parse_noe_file(filename):
                   f" of {filename}")
 
     # Return the list of Noe objects that we have aggregated
+    print()
     return noes
