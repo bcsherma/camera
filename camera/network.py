@@ -118,6 +118,25 @@ class SymGraph(nx.Graph):
 
         # Return the copy with only active edges
         return copy
+    
+    def inactive_graph(self):
+        """
+        Return a copy of the graph in which only inactive edges remain
+        """
+
+        # Get a copy of this graph with only the living edges
+        copy = self.living_graph()
+
+        # Remove all edges which are active
+        copy.remove_edges_from([(i, j) for i, j in self.edges() 
+                                if self[i][j]["active"]])
+        
+        # Remove vertices of degree 0 from the graph
+        copy.remove_nodes_from([n for n in copy.nodes() if not copy.degree(n)])
+
+        # Return the copy with only active edges
+        return copy
+
 
     def set_activity_level(self, max_size):
         """
