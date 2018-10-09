@@ -48,6 +48,21 @@ class Signature:
 
         return self.geminal == other
 
+    def to_dict(self):
+        """
+        Convert self into dictionary
+        """
+        
+        return {"label": self.label,
+                "color": "".join(sorted(self.color)),
+                "assignment": " ".join([m.label for m in self.asg]),
+                "options": " ".join([m.label for m in self.options]),
+                "carbon": f"{self.carbon:.3f}",
+                "hydrogen": f"{self.hydrogen:.3f}",
+                "geminal": self.geminal.label if self.geminal else ""} 
+            
+
+
     def __eq__(self, other):
         """
         Determine if this Signature object and another are equal
@@ -88,6 +103,17 @@ def set_assignment(signatures, structure):
         # with labels in the asg_str and options_str fields respectively
         sig.asg = {m for m in methyls if m.label in sig.asg_str}
         sig.options = {m for m in methyls if m.label in sig.option_str}
+
+
+def to_csv(signatures, outfile):
+    """
+    Write out set of signatures to csv file
+    """
+    
+    dictionaries = [s.to_dict() for s in signatures]
+    csv = pandas.DataFrame(dictionaries)
+    csv.to_csv(outfile, columns=["label", "color", "assignment", "options",  
+                                 "geminal", "carbon", "hydrogen"], index=False)
 
 
 def parse_hmqc_file(filename):
