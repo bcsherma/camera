@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-process_noes
+assign_signatures
 
-Read in an NOE spreadsheet and determine which NOEs are symmetric and to which
-signatures each NOE passing symmetry can be clustered. This also requires a 2D
-peaklist and a structure, which will be used by the constraint satisfaction
-solver to determine which explanations of the network are reasonable
+Given an NOE spreadhsheet, an HMQC spreadsheet, and a structure, determine
+all possible assignments for the signatures
 """
 
 import argparse
@@ -16,7 +14,6 @@ import camera.ground as ground
 import camera.params as params
 import camera.network as network
 import camera.structures as structures
-import camera.symmetrize as symmetrize
 
 
 def get_args():
@@ -36,14 +33,10 @@ def get_args():
     parser.add_argument("--mcs", type=int, default=3,
                         help="Maximum connected component size of the "
                              "symmetrization graph to use in CSP")
-    parser.add_argument("--sym-tol", nargs=2, type=float, 
-                        default=[0.15, 0.02], help="symmetry tolerances")
-    parser.add_argument("--clustering-tol", nargs=2, type=float, 
-                        default=[0.15, 0.02], help="clustering tolerances")
+    parser.add_argument("-o", "--output", help="Output HMQC CSV file")
     parser.add_argument("--fa", action="store_true", help="force assignments")
     parser.add_argument("--fo", action="store_true", help="force options")
-    parser.add_argument("-o", "--output", help="Output NOE .csv file")
-
+   
     args = parser.parse_args()
 
     # Update globals that are set from command line args
@@ -51,8 +44,6 @@ def get_args():
     params.RADIUS = args.radius
     params.ADDED_RADIUS = args.added_radius
     params.MAX_COMP_SIZE = args.mcs
-    params.SYM_CTOL, params.SYM_HTOL = args.sym_tol
-    params.CLS_CTOL, params.CLS_HTOL = args.clustering_tol
     params.FORCE_ASG = args.fa
     params.FORCE_SV = args.fo
 
@@ -74,15 +65,15 @@ def main():
     # Read in list of NOEs
     crosspeaks = noes.parse_noe_file(args.noes)
     
-    # Get possible clusters for each crosspeak
+    # Get possible clusters for each crosspeak and set the reciprocals
     noes.set_clusters(crosspeaks, signatures)
     noes.set_reciprocals(crosspeaks)
-    
+
     # Ignore any unclusterable crosspeaks
     crosspeaks = [c for c in crosspeaks if c.clusters]
 
     # Construct an NOE network from the given crosspeaks
-    symgraph = network.SymGraph(crosspeaks, True)
+    symgraph = network.SymGraph(crosspeaks, False)
     
     # Read in structure
     structure = structures.load_structure(args.structure)
@@ -91,17 +82,22 @@ def main():
     hmqc.set_assignment(signatures, structure)
     
     # Set the activity level to components of size <=2 
-    symgraph.set_activity_level(args.mcs)
+    symgraph.set_activity_level(2)
     
     # Check that ground truth is respected
     ground.check_network(symgraph, structure)
 
-    # Create SAT formula for clustering CSP
-    symmetrize.reduce_symmetrization_graph(symgraph, signatures, structure)
-    
-    # Write out NOE CSV file with reciprocal and clusters added
-    if args.output: 
-        symgraph.to_csv(args.output)
+    # Enumerate support sets
+    formula = sat.ClusteringCSP(signatures, symgraph, structure)
+    support = formula.enumerate()
+
+    # Add support sets as features of the signatures
+    for s in signatures:
+        s.options = support[s]
+
+    # Write support sets out to output file
+    if args.output:
+        hmqc.to_csv(signatures, args.output)
 
 
 # Run the main method for the script
