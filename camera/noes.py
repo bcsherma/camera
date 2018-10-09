@@ -7,6 +7,7 @@ This file contains an object oriented representation of an NOE, either in
 """
 
 import pandas
+import itertools
 from . import params
 
 
@@ -25,10 +26,12 @@ class Noe:
 
         # Convert the source object from a pandas series into a dictionary,
         # deleting all null entries
+
         source = source.dropna()
         source = source.to_dict()
 
         # Get necessary features from this NOE
+
         self.label = source.get("label", "")
         self.c2 = source["c2"]
         self.h2 = source["h2"]
@@ -36,7 +39,7 @@ class Noe:
         self.c1 = source.get("c1", None)
         self.intensity = source.get("intensity", 0.)
         self.cluster_str = source.get("cluster", "").split()
-        self.reciprocal_str = source.get("reciprocal", "").split()
+        self.reciprocal_str = source.get("reciprocals", "").split()
 
         # Determine the type of this NOE
 
@@ -66,8 +69,8 @@ class Noe:
 
         # Initialize fields that will be filled in later
 
-        self.clusters = {}
-        self.reciprocal = []
+        self.clusters = []
+        self.reciprocals = []
 
     def __repr__(self):
         """
@@ -133,9 +136,24 @@ class Noe:
 
         # Filter down to signatures within range
         signatures = filter(clusterable, signatures) 
-        self.clusters = set(signatures)
+        self.clusters = list(signatures)
 
+    def to_dict(self):
+        """
+        Return a dictionary representation of this Noe
+        """
 
+        dictionary = {"label": self.label,
+                      "intensity": self.intensity, 
+                      "c1": self.c1, "c2": self.c2, "h2": self.h2,
+                      "reciprocals": " ".join([
+                          r.label for r in self.reciprocals]),
+                      "clusters": " ".join([c.label for c in self.clusters])}
+        
+        if self.type == "4D":
+            dictionary["h1"] = self.h1
+
+        return dictionary
 
 def set_clusters(noes, signatures):
     """
@@ -147,8 +165,32 @@ def set_clusters(noes, signatures):
     # not already been manually clustered
 
     for noe in noes:
-        if not noe.clusters:
+
+        if not noe.cluster_str:
             noe.set_clusters(signatures)
+
+        else:
+            noe.clusters = {s for s in signatures 
+                            if s.label in noe.cluster_str}
+        
+
+def set_reciprocals(noes):
+    """
+    Given a set of NOEs, determine which have been set as each others
+    reciprocals by force
+    """
+    
+    pairs = itertools.combinations(noes, 2)
+    pairs = [(i, j) for i, j in pairs 
+             if i.label in j.reciprocal_str 
+             or j.label in i.reciprocal_str]
+
+    # Iterate over all pairs of known reciprocal and set them as such in the
+    # reciprocal field
+
+    for i, j in pairs:
+        i.reciprocals.append(j)
+        j.reciprocals.append(i)
 
 
 def parse_noe_file(filename):
@@ -177,3 +219,4 @@ def parse_noe_file(filename):
     print(f"Read {len(noes)} Noes from {filename} (excluding {no_diagonals} "
           f"diagonals)\n")
     return noes
+

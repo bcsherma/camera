@@ -6,6 +6,7 @@ contrain the assignment of 2D peaks to methlyls for the methyl assignment
 problem
 """
 
+import pandas
 import itertools
 import networkx as nx
 
@@ -17,7 +18,7 @@ class SymGraph(nx.Graph):
     observations
     """
     
-    def __init__(self, source, symmetry_known):
+    def __init__(self, source, find_symmetries):
         """
         Construct a SymGraph object by first calling the constructor for 
         the parent class, nx.Graph and then adding nodes and edges to self
@@ -26,25 +27,31 @@ class SymGraph(nx.Graph):
         # Call the nx.Graph constructor to initialize parent class fields
         nx.Graph.__init__(self)
 
+        # Save the type of this dataset
+        self.type = list({s.type for s in source})[0]
+
         # Add all noes from source as vertices of the graph 
         self.add_nodes_from(source)
         
         # If we already know the symmetry between the NOES, then they are
         # stored in the reciprocals field of each NOE. Simply add the edges
         # to this graph between each NOE and their known reciprocals
-        if symmetry_known:
 
-            for i in self.nodes():
-                
-                for j in i.reciprocals:
-                    self.add_edge(i, j, active=False, dead=False)
+        for i in self.nodes():
+            for j in i.reciprocals:
+                self.add_edge(i, j, active=False, dead=False)
 
-        else:
-            # Add an edge between all pairs of vertices which are symmetric. The 
-            # definition of symmetry is given in the Noe class in noes.py
+        # Add an edge between all pairs of vertices which are symmetric. The 
+        # definition of symmetry is given in the Noe class in noes.py
+        
+        if find_symmetries:
             for i, j in itertools.combinations(source, 2):
-               if i.symmetric(j):
-                   self.add_edge(i, j, active=False, dead=False)
+                
+                if i.reciprocals or j.reciprocals:
+                    continue
+            
+                if i.symmetric(j):
+                    self.add_edge(i, j, active=False, dead=False)
 
     def activate(self, i, j):
         """
@@ -159,3 +166,43 @@ class SymGraph(nx.Graph):
             else:
                 for i, j in component.edges():
                     self[i][j]["active"] = False
+
+    def to_csv(self, outfile):
+        """
+        Output all nodes as rows in a CSV file, where active edges are
+        recorded as elements in the reciprocal column of the CSV
+        """
+        
+        # Get a copy of the living component of the graph
+
+        living_graph = self.living_graph()
+
+        # Iterate over the nodes and them to running dict list
+        
+        dictionaries = []
+        for n in self.nodes():
+
+            if not n.reciprocals:
+                if living_graph.has_node(n):
+                    n.reciprocals = list(living_graph.neighbors(n))
+
+            dictionaries.append(n.to_dict())
+
+        # Write out to CSV file
+        
+        csv = pandas.DataFrame(dictionaries)
+        
+        # If the data type is 4D, we add the h1 column
+
+        if self.type == "4D":
+            columns = ["label", "c1", "h1", "c2", "h2", "intensity",
+                       "clusters", "reciprocals"]
+
+        else:
+            columns = ["label", "c1", "c2", "h2", "intensity",
+                       "clusters", "reciprocals"]
+
+        # Write out the CSV file 
+
+        csv.to_csv(outfile, columns=columns, index=False)
+
