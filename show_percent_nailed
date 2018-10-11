@@ -10,6 +10,7 @@ residue as their support set
 import pandas
 import argparse
 import camera.hmqc as hmqc
+import camera.structures as structures
 
 def get_args():
     """
@@ -18,7 +19,8 @@ def get_args():
 
     parser = argparse.ArgumentParser(description=__doc__.strip())
     parser.add_argument("hmqc", help="2D spreadsheet")
-    
+    parser.add_argument("structure", help="Structure file")
+
     return parser.parse_args()
 
 
@@ -29,7 +31,9 @@ def main():
 
     args = get_args()
     signatures = hmqc.parse_hmqc_file(args.hmqc)
-
+    structure = structures.load_structure(args.structure)
+    hmqc.set_assignment(signatures, structure)
+    hmqc.nailed_histogram(signatures)
 
 # Run the main method for the script
 if __name__ == "__main__":

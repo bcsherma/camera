@@ -6,6 +6,7 @@ used in the methyl assignment problem.
 """
 
 import pandas
+import shutil
 import itertools
 
 
@@ -114,6 +115,51 @@ def to_csv(signatures, outfile):
     csv = pandas.DataFrame(dictionaries)
     csv.to_csv(outfile, columns=["label", "color", "assignment", "options",  
                                  "geminal", "carbon", "hydrogen"], index=False)
+
+def nailed_histogram(signatures, support=None):
+    """
+    Print a histogram of support set sizes, either from given support
+    dictionary or using the options field of the hmqc peaks
+    """
+
+    # If support is None, then set it as a mapping from each signature to
+    # its options field
+
+    if support is None:
+        support = {s: s.options for s in signatures}
+
+    # Get support set sizes
+
+    sizes = [len(support[s]) for s in support if support[s]]
+    all_sizes = set(sizes)
+
+    # Get maximum histogram bar size
+    max_length = shutil.get_terminal_size()[0] - 20
+
+
+    # Iterate over all_sizes
+    for size in sorted(all_sizes):
+    
+        print(f"[no.options={size:<2}]:{sizes.count(size):<3}", end="|")
+        print(min(sizes.count(size), max_length) * "\u25a7")
+
+    # Figure out how many nailed there are
+
+    total = len(support)
+
+    nailed = 0
+    for sig, sup in support.items():
+
+        if len(sup) == 1:
+            nailed += 1
+
+        elif len(sup) == 2:
+
+            left, right = list(sup)
+            if left.geminal(right):
+                nailed += 1
+
+    print(f"\n{100*nailed/total:.3f}% nailed\n")
 
 
 def parse_hmqc_file(filename):
