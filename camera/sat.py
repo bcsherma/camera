@@ -159,6 +159,14 @@ class Formula:
         
         # Return the header and the body combined
         return header + "\n" + body
+
+    def to_file(self, outfile):
+        """
+        Write formula out to output file
+        """
+
+        with open(outfile, "w") as outf:
+            outf.write(self.to_string())
     
     def solve(self):
         """
