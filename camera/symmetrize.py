@@ -12,6 +12,8 @@ import halo
 import itertools
 import networkx as nx
 from . import sat
+from . import ground
+from . import params
 
 SPIN_STR = "checking a component of size {}..."
 
@@ -38,13 +40,19 @@ def reduce_symmetrization_graph(network, signatures, structure):
 
         print(f"Beginning iteration number {iteration_no} over "
               f"components of the symmetrization graph\n")
+        
+        # Check for ground truth being respected
+
+        ground.check_network(network, structure)
 
         # Iterate over living but inactive connected components of the 
         # symmetrization graph.
 
         inactive_graph = network.inactive_graph()
-
-        for component in nx.connected_component_subgraphs(inactive_graph):
+        
+        components = nx.connected_component_subgraphs(inactive_graph)
+        components = sorted(components, key=lambda x: x.number_of_nodes())
+        for component in components: 
 
             # Call helper to determine which edges of this component are in
             # no maximum cardinality matchings that preserve SAT
@@ -63,8 +71,7 @@ def reduce_symmetrization_graph(network, signatures, structure):
                     network.kill(i, j)
 
                 # Reset the activity level and see if we got any new edges
-
-                network.set_activity_level(2)
+                network.set_activity_level(params.MAX_COMP_SIZE)
 
                 active_edges = len(network.active_graph().edges())
                 
@@ -83,8 +90,9 @@ def reduce_symmetrization_graph(network, signatures, structure):
         print()
     
     # Iterate over complex active components and kill edges which cannot be
-    # activate
+    # activated
 
+    ground.check_network(network, structure)
     clean_components(network, signatures, structure)
 
 
@@ -120,12 +128,11 @@ def clean_components(network, signatures, structure):
         formula.add_aux_clause([formula.activation_variables[i][j]])
 
         # Run solver, and if the result in UNSAT kill i, j
+        
+        result = formula.solve()
+        formula.flush()
 
-        if formula.solve():
-            formula.flush()
-
-        else:
-            formula.flush()
+        if not result:
             network.kill(i, j)
     
     # Print a newline
@@ -159,6 +166,9 @@ def test_component(component, network, signatures, structure):
             for m in matching:
                 if m in unseen:
                     unseen.remove(m)
+
+        for i, j in matching:
+            network.deactivate(i, j)
 
     if unseen:
         spinner.succeed(f"{text} removed {len(unseen)} edges")
