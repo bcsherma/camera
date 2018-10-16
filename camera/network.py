@@ -7,6 +7,7 @@ problem
 """
 
 import pandas
+import shutil
 import itertools
 import networkx as nx
 
@@ -101,9 +102,6 @@ class SymGraph(nx.Graph):
         # Remove all edges which are dead
         copy.remove_edges_from([(i, j) for i, j in self.edges() 
                                 if self[i][j]["dead"]])
-
-        # Remove vertices of degree 0 from the graph
-        copy.remove_nodes_from([n for n in copy.nodes() if not copy.degree(n)])
 
         # Return the copy with the dead edges removed
         return copy
@@ -205,4 +203,42 @@ class SymGraph(nx.Graph):
         # Write out the CSV file 
 
         csv.to_csv(outfile, columns=columns, index=False)
+
+    def histogram(self):
+        """
+        Print out a histogram of the sizes of the connected components of the
+        living portion of the graph
+        """
+
+        # Get the living sym graph and the connected component sizes
+
+        living_graph = self.living_graph()
+        sizes = [component.number_of_nodes() for component 
+                 in nx.connected_component_subgraphs(living_graph)]
+        all_sizes = set(sizes)
+        counts = {s: sizes.count(s) for s in all_sizes}
+        
+        # Get the maximum line length from the size of the current terminal
+        # window
+
+        max_length = shutil.get_terminal_size()[0] - 30
+
+        # Get the largest count and scale down all counts to proportion
+
+        max_count = max(sizes.count(s) for s in all_sizes)
+
+        if max_count > max_length:
+
+            counts = {s: max(1, int(counts[s]*max_length/max_count))
+                      for s in counts}
+
+        # Iterate over all_sizes
+        
+        for size in sorted(all_sizes):
+        
+            print(f"[no.comp.of.size={size:<2}]:{sizes.count(size):<3}", end="|")
+            print(counts[size]*"\u25a7")
+
+        print()
+
 
