@@ -669,3 +669,47 @@ class ClusteringCSP(Formula):
 
                 # Add this clause to the formula
                 self.add_clause(clause)
+
+
+class IsomorphismCSP(Formula):
+    """
+    CSP which maps one graph into another, without modelling ambiguity of
+    clustering or symmetrization
+    """
+
+    def __init__(self, graph_h, structure):
+        """
+        Construct an instance of the subgraph isomorphism csp, first
+        calling the super class constructor
+        """
+
+        # Call super class constructor to set up fundamental methods and fields
+
+        Formula.__init__(self)
+
+        # Set up variable tables.
+        #
+        # The assignment variables table maps the vertices of the graph H to
+        # a dictionary which maps the methyls in the domain of a vertex to the
+        # variable representing that assignment.
+        #
+        # The variable_cost maps variables to the cost of having that variable
+        # set to True. This is used to store the cost of each edge assignment
+        # so that we can perform weighted sampling.
+
+        self.assignment_variables = {n: {} for n in graph_h.nodes()}
+        self.variable_cost = {}
+
+        # Set up variables and clauses
+
+        self.inject_vertices(graph_h.nodes(), structure)
+        self.distance_constraints(graph_h, structure)
+
+    def distance_constraints(graph_h, structure):
+        """
+        Force each edge of the graph_h to be assigned to an edge of the
+        structure. Geminal edges of the graph H must be assigned to geminal
+        edges of the structure.
+        """
+
+        
