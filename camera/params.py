@@ -28,4 +28,3 @@ MAX_COMP_SIZE = 3
 
 FORCE_ASG = False
 FORCE_SV = False
-

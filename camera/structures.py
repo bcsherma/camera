@@ -23,23 +23,23 @@ def load_structure(filename):
     # Read in json dictionary
     with open(filename) as infile:
         dic = json.load(infile)
-    
+
     # Initialize empty set of methyls
     methyls = set()
-    
+
     # Map from methyl labels to methyl objects
-    label2methyl = {}  
+    label2methyl = {}
 
     # Add methyls from the dictionary
     for v in dic["vertices"]:
-        
+
         # Create new methyl from this entry
         new_methyl = Methyl(v["color"], v["seqid"], v["order"],
                             added=v["added"])
-        
+
         # Add to set of new methyls
         methyls.add(new_methyl)
-        
+
         # Create map from label of this methyl to the methyl itself
         label2methyl[new_methyl.label] = new_methyl
 
@@ -54,7 +54,7 @@ def load_structure(filename):
 
     # Get set of colors
     colors = [m.color for m in structure.nodes()]
-    
+
     all_colors = set(colors)
     for c in sorted(all_colors):
         print(f"{colors.count(c):2} methyls of type {c}")
@@ -75,7 +75,7 @@ class Methyl:
         """
 
         # Save all the features of this residue
-        self.color = color  
+        self.color = color
         self.seqid = seqid
         self.order = order if color in {"L", "V"} else None
         self.label = (f"{color}{seqid}.{order}"
@@ -141,7 +141,7 @@ def get_residues(filename: str, model: int, chain: str):
         exit(1)
 
     # get the resideues in chain
-    return chains[chain].get_residues()  
+    return chains[chain].get_residues()
 
 
 def get_methyls(filename: str, colors: list, model: int, chain: str) -> list:
@@ -154,28 +154,28 @@ def get_methyls(filename: str, colors: list, model: int, chain: str) -> list:
     residues = get_residues(filename, model, chain)
 
     # Initialize an empty set of methyls
-    methyls = set()  
+    methyls = set()
 
     # Iterate over residues
     for r in residues:
-        
+
         # get color of this residue
-        color = r.get_resname()  
-        
+        color = r.get_resname()
+
         # Ignore this residue if color not desired
-        if color not in colors:  
+        if color not in colors:
             continue
 
         # Create two methyls for these
-        if color in {"LEU", "VAL"}:  
+        if color in {"LEU", "VAL"}:
             methyls.add(Methyl(color[0], r.get_id()[1], 1))
             methyls.add(Methyl(color[0], r.get_id()[1], 2))
 
         else:
             methyls.add(Methyl(color[0], r.get_id()[1], None))
-    
+
     # return this set of methyls
-    return methyls  
+    return methyls
 
 
 def get_atoms(filename: str, colors: list, model: int, chain: str) -> list:
@@ -187,23 +187,23 @@ def get_atoms(filename: str, colors: list, model: int, chain: str) -> list:
     residues = get_residues(filename, model, chain)
 
     # Initialize empty dictionary
-    atom_map = {}  
+    atom_map = {}
 
     # Iterate over the residues
     for res in residues:
-        
+
         # get color of this methyl
-        color = res.get_resname()  
+        color = res.get_resname()
 
         # If this res does not have desired color, ignore
         if color not in colors:
             continue
 
         # Get the sequence id of this residue
-        seqid = res.get_id()[1]  
-       
+        seqid = res.get_id()[1]
+
         # Get first letter of color
-        c = color[0]  
+        c = color[0]
 
         # Extract the appropriate atoms for methyls of any color
         if color == "LEU":
@@ -224,7 +224,7 @@ def get_atoms(filename: str, colors: list, model: int, chain: str) -> list:
             atom_map[f"{c}{seqid}"] = [a for a in res if 'HE' in a.id]
 
     # return mapping from methyl names to their atoms
-    return atom_map  
+    return atom_map
 
 
 def pairwise_distance(triplet1, triplet2):
@@ -244,4 +244,3 @@ def pairwise_distance(triplet1, triplet2):
 
     # Return the average of the sum to the negative 1/6
     return pow(summation/9, -1/6)
-

@@ -35,7 +35,7 @@ class Signature:
         self.asg_str = source.get("assignment", "").split()
         self.option_str = source.get("options", "").split()
         self.geminal_str = source.get("geminal", "")
-        
+
         # Initialize fields that will be set later
         self.asg = []
         self.options = []
@@ -53,21 +53,22 @@ class Signature:
         """
         Convert self into dictionary
         """
-        
+
         return {"label": self.label,
                 "color": "".join(sorted(self.color)),
                 "assignment": " ".join([m.label for m in self.asg]),
                 "options": " ".join([m.label for m in self.options]),
                 "carbon": f"{self.carbon:.3f}",
                 "hydrogen": f"{self.hydrogen:.3f}",
-                "geminal": self.geminal.label if self.geminal else ""} 
-            
-
+                "geminal": self.geminal.label if self.geminal else ""}
 
     def __eq__(self, other):
         """
         Determine if this Signature object and another are equal
         """
+
+        if not isinstance(other, Signature):
+            return False
 
         return self.label == other.label
 
@@ -90,16 +91,16 @@ def set_assignment(signatures, structure):
     """
     Given a list of signatures and a structure, set the assignment and options
     fields of each signature so that each respectively contains the set of
-    methyls compatible with the given assignment and options from the 
+    methyls compatible with the given assignment and options from the
     CSV file
     """
-    
+
     # Get a set containing the nodes of the structure
     methyls = set(structure.nodes)
 
     # Iterate over the signatures in the list
     for sig in signatures:
-        
+
         # Update the assignment and options lists to contain the methyls
         # with labels in the asg_str and options_str fields respectively
         sig.asg = {m for m in methyls if m.label in sig.asg_str}
@@ -110,11 +111,12 @@ def to_csv(signatures, outfile):
     """
     Write out set of signatures to csv file
     """
-    
+
     dictionaries = [s.to_dict() for s in signatures]
     csv = pandas.DataFrame(dictionaries)
-    csv.to_csv(outfile, columns=["label", "color", "assignment", "options",  
+    csv.to_csv(outfile, columns=["label", "color", "assignment", "options",
                                  "geminal", "carbon", "hydrogen"], index=False)
+
 
 def nailed_histogram(signatures, support=None):
     """
@@ -136,10 +138,9 @@ def nailed_histogram(signatures, support=None):
     # Get maximum histogram bar size
     max_length = shutil.get_terminal_size()[0] - 20
 
-
     # Iterate over all_sizes
     for size in sorted(all_sizes):
-    
+
         print(f"[no.options={size:<2}]:{sizes.count(size):<3}", end="|")
         print(min(sizes.count(size), max_length) * "\u25a7")
 
@@ -172,7 +173,7 @@ def parse_hmqc_file(filename):
 
     signatures = []
     csv = pandas.read_csv(filename)
-    
+
     for idx, row in csv.iterrows():
         try:
             signatures.append(Signature(row))
@@ -180,7 +181,7 @@ def parse_hmqc_file(filename):
         except:
             print(f"warning: invalid HMQC peak definition on line {idx + 1} "
                   f"of {filename}")
-    
+
     # Determine which pairs of signatures are known to be geminal pairs
     for i, j in itertools.combinations(signatures, 2):
         if i.geminal_str == j.label or j.geminal_str == i.label:
@@ -192,4 +193,3 @@ def parse_hmqc_file(filename):
 
     print()
     return signatures
-
