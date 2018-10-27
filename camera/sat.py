@@ -705,11 +705,62 @@ class IsomorphismCSP(Formula):
         self.inject_vertices(graph_h.nodes(), structure)
         self.distance_constraints(graph_h, structure)
 
-    def distance_constraints(graph_h, structure):
+    def distance_constraints(self, graph_h, structure):
         """
         Force each edge of the graph_h to be assigned to an edge of the
         structure. Geminal edges of the graph H must be assigned to geminal
         edges of the structure.
         """
 
-        
+        # Localize the assignment variable table
+
+        asgvar = self.assignment_variables
+
+        # Iterate over the edges of the graph H
+
+        for i, j in graph_h.edges():
+
+            # Check whether these are a geminal
+            h_geminal = i.is_geminal(j)
+
+            # Iterate over the domain of the vertex i
+
+            for i_met in asgvar[i].keys():
+
+                # Initialize an empty clause which needs to be satisfied by
+                # the assignment of j if i is assigned to i_met
+
+                clause = [-asgvar[i][i_met]]
+
+                # Iterate over domain of the vertex j
+
+                for j_met in asgvar[j].keys():
+
+                    # If i_met and j_met are the same methyl, ignore
+
+                    if i_met == j_met:
+                        continue
+
+                    # Compare geminality of the edge of H to this pair in the
+                    # structure
+
+                    if h_geminal > i_met.geminal(j_met):
+                        continue
+
+                    # Get the distance between i_met and j_met over the
+                    # structure
+
+                    distance = structure[i_met][j_met]["distances"][0]
+
+                    # If the distance between i_met and j_met is short enough,
+                    # allow j -> j_met to satisfy this clause
+
+                    if i_met.added or j_met.added:
+                        if distance < params.ADDED_RADIUS:
+                            clause.append(asgvar[j][j_met])
+
+                    elif distance < params.RADIUS:
+                        clause.append(asgvar[j][j_met])
+
+                # Add the clause to the set of base clauses
+                self.add_clause(clause)
