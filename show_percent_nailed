@@ -7,10 +7,10 @@ which is defined as the fraction of vertices which have methyls from a single
 residue as their support set
 """
 
-import pandas
 import argparse
 import camera.hmqc as hmqc
 import camera.structures as structures
+
 
 def get_args():
     """
@@ -34,6 +34,7 @@ def main():
     structure = structures.load_structure(args.structure)
     hmqc.set_assignment(signatures, structure)
     hmqc.nailed_histogram(signatures)
+
 
 # Run the main method for the script
 if __name__ == "__main__":

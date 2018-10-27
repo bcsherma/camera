@@ -20,7 +20,7 @@ def get_args():
     """
     Parse command line arguments
     """
-    
+
     # Create a command line argument parser and add arguments to it
     parser = argparse.ArgumentParser(description=__doc__.strip())
     parser.add_argument("hmqc", help="2D peak list (.csv)")
@@ -36,7 +36,7 @@ def get_args():
     parser.add_argument("-o", "--output", help="Output HMQC CSV file")
     parser.add_argument("--fa", action="store_true", help="force assignments")
     parser.add_argument("--fo", action="store_true", help="force options")
-   
+
     args = parser.parse_args()
 
     # Update globals that are set from command line args
@@ -55,7 +55,7 @@ def main():
     """
     Main method for the script
     """
-    
+
     # Parse command line arguments for the script
     args = get_args()
 
@@ -64,7 +64,7 @@ def main():
 
     # Read in list of NOEs
     crosspeaks = noes.parse_noe_file(args.noes)
-    
+
     # Get possible clusters for each crosspeak and set the reciprocals
     noes.set_clusters(crosspeaks, signatures)
     noes.set_reciprocals(crosspeaks)
@@ -74,16 +74,16 @@ def main():
 
     # Construct an NOE network from the given crosspeaks
     symgraph = network.SymGraph(crosspeaks, False)
-    
+
     # Read in structure
     structure = structures.load_structure(args.structure)
-    
+
     # Set the assignments and options sets for the signatures
     hmqc.set_assignment(signatures, structure)
-    
-    # Set the activity level to components of size <=2 
-    symgraph.set_activity_level(2)
-    
+
+    # Set the activity level to components of size <=2
+    symgraph.set_activity_level(args.mcs)
+
     # Check that ground truth is respected
     ground.check_network(symgraph, structure)
 

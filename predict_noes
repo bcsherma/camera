@@ -44,15 +44,15 @@ def get_args():
 
 def main():
     """Main method for this script"""
-    
+
     # Parse command line arguments
-    args = get_args()  
+    args = get_args()
 
     print(f"Reading methyls from pdb file: {args.files[0]}")
 
     # Get methyls from the first structure
     methyls = structures.get_methyls(args.files[0], args.colors, args.model,
-                                    args.chain)
+                                     args.chain)
 
     # Filter proR or proS
     if args.pror:
@@ -70,14 +70,14 @@ def main():
 
         # Get the methyls in here
         atom_map = structures.get_atoms(f, args.colors, args.model,
-                                       args.chain)
+                                        args.chain)
 
         # Iterate over all pairs of methyls
         for i, j in itertools.combinations(methyls, 2):
 
             # Get distance between these
             d = structures.pairwise_distance(atom_map[i.label],
-                                            atom_map[j.label])
+                                             atom_map[j.label])
 
             # Save these distances in table
             distances[i][j].append(d)
