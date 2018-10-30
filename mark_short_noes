@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""
+Take as input a 300ms CCH file and a 50ms CCH file, and mark the short
+range NOEs in the 300ms CCH file as short range if they appear in the 50ms
+CCH file
+"""
+
+import pandas
+import argparse
+import camera.noes as noes
+
+
+def get_args():
+    """
+    Parse command line arguments and return a namespace
+    """
+
+    parser = argparse.ArgumentParser(description=__doc__.strip())
+    parser.add_argument("cch_300", help="300ms cch file (.csv)")
+    parser.add_argument("cch_50", help="50ms cch file (.csv)")
+    parser.add_argument("-o", "--output", help="output csv file")
+
+    return parser.parse_args()
+
+
+def main():
+    """
+    Main method for this script
+    """
+
+    # Parse command line arguments
+
+    args = get_args()
+
+    # Read in the normal and short range lists of NOES
+
+    normal_noes = noes.parse_noe_file(args.cch_300)
+    short_noes = noes.parse_noe_file(args.cch_50)
+
+    # Iterate over the list of short noes
+
+    for short in short_noes:
+
+        # Look for matches in the normal noe list
+
+        matches = [n for n in normal_noes if abs(short.c1 - n.c1) < 0.1
+                   and abs(short.c2 - n.c2) < 0.1
+                   and abs(short.h2 - n.h2) < 0.01]
+
+        # If we found exactly one match, then mark it as a short NOE
+
+        if len(matches) == 1:
+
+            for m in matches:
+                m.short_range = True
+
+        # If we found no matches, then add this short range NOE to the normal
+        # NOE set
+
+        elif len(matches) == 0:
+
+            short.short_range = True
+            short.label = "short_" + short.label
+            normal_noes.append(short)
+
+        if args.output:
+
+            # Write out new NOE list to file
+
+            noe_dicts = [n.to_dict() for n in normal_noes]
+            csv = pandas.DataFrame(noe_dicts)
+            columns = ["label", "c1", "c2", "h2", "cluster", "reciprocals",
+                       "short"]
+
+            if not [n for n in normal_noes if n.reciprocal_str]:
+                columns.remove("reciprocals")
+
+            if not [n for n in normal_noes if n.cluster_str]:
+                columns.remove("cluster")
+
+            csv.to_csv(args.output, index=False, columns=columns)
+
+
+if __name__ == "__main__":
+    main()

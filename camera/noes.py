@@ -146,12 +146,17 @@ class Noe:
         Return a dictionary representation of this Noe
         """
 
+        if self.reciprocals:
+            self.recirpocal_str = [n.label for n in self.reciprocals]
+
+        if self.clusters:
+            self.cluster_str = [n.label for n in self.clusters]
+
         dictionary = {"label": self.label,
                       "intensity": self.intensity,
                       "c1": self.c1, "c2": self.c2, "h2": self.h2,
-                      "reciprocals": " ".join([
-                          r.label for r in self.reciprocals]),
-                      "clusters": " ".join([c.label for c in self.clusters]),
+                      "reciprocals": " ".join(self.reciprocal_str),
+                      "clusters": " ".join(self.cluster_str),
                       "short": "x" if self.short_range else ""}
 
         if self.type == "4D":
