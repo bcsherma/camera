@@ -142,7 +142,8 @@ def clean_components(network, signatures, structure):
 def test_component(component, network, signatures, structure):
     """
     Iterate over the maximum cardinality matchings of the given component. For
-    each matching, test whether its activation causes satisfiability to be broken
+    each matching, test whether its activation causes satisfiability to be
+    broken
     """
 
     text = SPIN_STR.format(component.number_of_nodes())

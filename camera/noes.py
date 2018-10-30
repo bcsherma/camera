@@ -20,7 +20,7 @@ class Noe:
 
     def __init__(self, source):
         """
-        Construct an NOE object from a pandas series which contains all of 
+        Construct an NOE object from a pandas series which contains all of
         the relevant information about this NOE
         """
 
@@ -40,6 +40,7 @@ class Noe:
         self.intensity = source.get("intensity", 0.)
         self.cluster_str = source.get("cluster", "").split()
         self.reciprocal_str = source.get("reciprocals", "").split()
+        self.short_range = bool(source.get("short", False))
 
         # Determine the type of this NOE
 
@@ -51,14 +52,13 @@ class Noe:
 
         else:
             self.type = "HCH"
-        
-        
-        # Check for diagonals 
+
+        # Check for diagonals
 
         if self.type == "CCH":
             if abs(self.c1 - self.c2) < 0.1:
                 raise Warning
-        
+
         elif self.type == "HCH":
             if abs(self.h1 - self.h2) < 0.01:
                 raise Warning
@@ -77,7 +77,7 @@ class Noe:
         Return a text representation of this NOE for printing
         """
 
-        return f"noe-{self.label}" 
+        return f"noe-{self.label}"
 
     def __eq__(self, other):
         """
@@ -98,27 +98,30 @@ class Noe:
 
     def symmetric(self, other):
         """
-        Determine if this NOE and another are symmetric according to the 
+        Determine if this NOE and another are symmetric according to the
         symmetrization tolerances
         """
-        
+
         # If these are NOEs from different experiments, return False
         if self.type != other.type:
             return False
 
+        if self.short_range != other.short_range:
+            return False
+
         elif self.type == "CCH":
-            return (abs(self.c1 - other.c2) < params.SYM_CTOL 
+            return (abs(self.c1 - other.c2) < params.SYM_CTOL
                     and abs(self.c2 - other.c1) < params.SYM_CTOL)
-        
+
         elif self.type == "HCH":
-            return (abs(self.h1 - other.h2) < params.SYM_HTOL 
+            return (abs(self.h1 - other.h2) < params.SYM_HTOL
                     and abs(self.h2 - other.h1) < params.SYM_HTOL)
-        
+
         # Check for 4D NOE Symmetry, which relies on all coordinates
         else:
-            return (abs(self.h1 - other.h2) < params.SYM_HTOL  
+            return (abs(self.h1 - other.h2) < params.SYM_HTOL
                     and abs(self.h2 - other.h1) < params.SYM_HTOL
-                    and abs(self.c1 - other.c2) < params.SYM_CTOL 
+                    and abs(self.c1 - other.c2) < params.SYM_CTOL
                     and abs(self.c2 - other.c1) < params.SYM_CTOL)
 
     def set_clusters(self, signatures):
@@ -126,16 +129,16 @@ class Noe:
         Given a list of signatures, set this Noes clusters field to be all
         signatures which are within the clustering tolerance of itself
         """
-        
+
         # Reset my list of clusters to be empty
         self.clusters = {}
-        
+
         def clusterable(sig):
             return (abs(sig.carbon - self.c2) < params.CLS_CTOL
                     and abs(sig.hydrogen - self.h2) < params.CLS_HTOL)
 
         # Filter down to signatures within range
-        signatures = filter(clusterable, signatures) 
+        signatures = filter(clusterable, signatures)
         self.clusters = list(signatures)
 
     def to_dict(self):
@@ -144,16 +147,18 @@ class Noe:
         """
 
         dictionary = {"label": self.label,
-                      "intensity": self.intensity, 
+                      "intensity": self.intensity,
                       "c1": self.c1, "c2": self.c2, "h2": self.h2,
                       "reciprocals": " ".join([
                           r.label for r in self.reciprocals]),
-                      "clusters": " ".join([c.label for c in self.clusters])}
-        
+                      "clusters": " ".join([c.label for c in self.clusters]),
+                      "short": "x" if self.short_range else ""}
+
         if self.type == "4D":
             dictionary["h1"] = self.h1
 
         return dictionary
+
 
 def set_clusters(noes, signatures):
     """
@@ -170,19 +175,19 @@ def set_clusters(noes, signatures):
             noe.set_clusters(signatures)
 
         else:
-            noe.clusters = {s for s in signatures 
+            noe.clusters = {s for s in signatures
                             if s.label in noe.cluster_str}
-        
+
 
 def set_reciprocals(noes):
     """
     Given a set of NOEs, determine which have been set as each others
     reciprocals by force
     """
-    
+
     pairs = itertools.combinations(noes, 2)
-    pairs = [(i, j) for i, j in pairs 
-             if i.label in j.reciprocal_str 
+    pairs = [(i, j) for i, j in pairs
+             if i.label in j.reciprocal_str
              or j.label in i.reciprocal_str]
 
     # Iterate over all pairs of known reciprocal and set them as such in the
@@ -201,13 +206,13 @@ def parse_noe_file(filename):
 
     noes = []
     csv = pandas.read_csv(filename)
-    no_diagonals = 0 
+    no_diagonals = 0
 
     for idx, row in csv.iterrows():
 
         try:
             noes.append(Noe(row))
-        
+
         except Warning:
             no_diagonals += 1
 
@@ -219,4 +224,3 @@ def parse_noe_file(filename):
     print(f"Read {len(noes)} Noes from {filename} (excluding {no_diagonals} "
           f"diagonals)\n")
     return noes
-
