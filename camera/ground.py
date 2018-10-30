@@ -25,15 +25,28 @@ def check_network(network, structure):
 
     for component in nx.connected_component_subgraphs(network):
 
+        # Check whether this is a short component
+
+        short = list(component.nodes())[0].short_range
+
         min_radius = check_component(component, structure)
 
+        problem = False
+
         if params.RADIUS < min_radius < float("inf"):
+            problem = True
+
+        if short and params.SHORT_RADIUS < min_radius < float("inf"):
+            problem = True
+
+        if problem:
 
             print(f"warning: component cannot satisfy ground truth until "
                   f"{min_radius:.3f} angstroms\n")
 
             for c in component.nodes():
-                print(f"\tnode={c} clusters={c.clusters}")
+                print(f"\tnode={c} {c.c1:2.3f} {c.c2:2.3f} {c.h2:1.3f} "
+                      f"clusters={c.clusters}" + (" (short)" if short else ""))
             print()
 
             for i, j in component.edges():
