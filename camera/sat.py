@@ -755,12 +755,36 @@ class IsomorphismCSP(Formula):
                     # If the distance between i_met and j_met is short enough,
                     # allow j -> j_met to satisfy this clause
 
+                    within_range = False
+
                     if i_met.added or j_met.added:
                         if distance < params.ADDED_RADIUS:
-                            clause.append(asgvar[j][j_met])
+                            within_range = True
 
                     elif distance < params.RADIUS:
+                        within_range = True
+
+                    if within_range:
+
                         clause.append(asgvar[j][j_met])
 
+                        # Create a variable which represents that (i,j) is
+                        # mapped to i_map, j_map
+
+                        variable = self.next_variable()
+                        self.variable_cost[variable] = distance
+                        self.variable_meaning[variable] = (Formula.EDG_VAR,
+                                                           (i, j),
+                                                           (i_met, j_met))
+
+                        # Constrain the variable to be true if and only if the
+                        # vertex assignment variables are true
+
+                        self.add_clause([-variable, asgvar[i][i_met]])
+                        self.add_clause([-variable, asgvar[j][j_met]])
+                        self.add_clause([variable, -asgvar[j][j_met],
+                                         -asgvar[j][j_met]])
+
                 # Add the clause to the set of base clauses
+
                 self.add_clause(clause)
