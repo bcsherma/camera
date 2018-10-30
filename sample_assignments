@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""
+sample_assignments
+
+Given an NOE spreadsheet, an HMQC spreadsheet with options already filled in,
+and a structure, sample from the space of all satisfying assignments
+"""
+
+import argparse
+import camera.sat as sat
+import camera.hmqc as hmqc
+import camera.noes as noes
+import camera.ground as ground
+import camera.params as params
+import camera.network as network
+import camera.structures as structures
+
+
+def get_args():
+    """
+    Parse command line arguments
+    """
+
+    # Create a command line argument parser and add arguments to it
+    parser = argparse.ArgumentParser(description=__doc__.strip())
+    parser.add_argument("hmqc", help="2D peak list (.csv)")
+    parser.add_argument("noes", help="NOE spreadsheet (.csv)")
+    parser.add_argument("structure", help="predicted NOE file (.json)")
+    parser.add_argument("-r", "--radius", type=float, default=10.,
+                        help="Maximum noe distance")
+    parser.add_argument("--added-radius", type=float, default=12.,
+                        help="Maximum noe distance for added methyls")
+    parser.add_argument("--mcs", type=int, default=3,
+                        help="Maximum connected component size of the "
+                             "symmetrization graph to use in CSP")
+    parser.add_argument("-o", "--output", help="Output HMQC CSV file")
+    parser.add_argument("--fa", action="store_true",
+                        help="force assignments")
+    parser.add_argument("-e", "--exponent", default=1, type=int,
+                        help="power to which we raise the distance in the "
+                        "sampling distribution")
+    parser.add_argument("--factor", default=10, type=int,
+                        help="If two vertex assignments deviate from "
+                        "independence by more than this factor, we "
+                        "corellate them as a hard constraint")
+    parser.add_argument("-n", "--num-samples", default=1000, type=int,
+                        help="Number of samples to acquire for getting an "
+                        "empircal estimate of the marginals")
+
+    args = parser.parse_args()
+
+    # Update globals that are set from command line args
+
+    params.RADIUS = args.radius
+    params.ADDED_RADIUS = args.added_radius
+    params.MAX_COMP_SIZE = args.mcs
+    params.FORCE_ASG = args.fa
+    params.FORCE_SV = True  # For this script, we always force the options
+
+    # Return the command line argument namespace
+    return args
+
+
+def gibbs_reduce(graph_h, structure, exponent, num_samples):
+    """
+    Sample from the gibbs distribution and rerun enumeration, then rinse and
+    repeat until we reach a fixed point
+    """
+
+
+
+def main():
+    """
+    Main method for the script
+    """
+
+    # Parse command line arguments for the script
+    args = get_args()
+
+    # Read in list of HMQC signatures
+    signatures = hmqc.parse_hmqc_file(args.hmqc)
+
+    # Read in list of NOEs
+    crosspeaks = noes.parse_noe_file(args.noes)
+
+    # Get possible clusters for each crosspeak and set the reciprocals
+    noes.set_clusters(crosspeaks, signatures)
+    noes.set_reciprocals(crosspeaks)
+
+    # Ignore any unclusterable crosspeaks
+    crosspeaks = [c for c in crosspeaks if c.clusters]
+
+    # Construct an NOE network from the given crosspeaks
+    symgraph = network.SymGraph(crosspeaks, False)
+    symgraph.histogram()
+
+    # Read in structure
+    structure = structures.load_structure(args.structure)
+
+    # Set the assignments and options sets for the signatures
+    hmqc.set_assignment(signatures, structure)
+
+    # Set the activity level to components of size <=2
+    symgraph.set_activity_level(2)
+
+    # Check that ground truth is respected
+    ground.check_network(symgraph, structure)
+
+    # Enumerate clusterings of the network
+
+    print("Enumerating clusterings of the data...", end=" ")
+    formula = sat.ClusteringCSP(signatures, symgraph, structure)
+    clusterings = formula.enumerate_clusterings()
+    print(f"{len(clusterings)} found\n")
+
+    # Iterate over the clutserings of the data
+    for idx, clustering in enumerate(clusterings):
+
+        print(f"Running on clustering number {idx + 1}\n")
+        graph_h = network.SignatureGraph(signatures, symgraph, clustering)
+        formula = sat.IsomorphismCSP(graph_h, structure)
+        marginals = formula.marginalize(args.exponent, args.num_samples)
+
+    # Write support sets out to output file
+    if args.output:
+        hmqc.to_csv(signatures, args.output)
+
+
+# Run the main method for the script
+if __name__ == "__main__":
+    main()
