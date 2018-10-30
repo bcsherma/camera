@@ -74,6 +74,7 @@ def main():
 
     # Construct an NOE network from the given crosspeaks
     symgraph = network.SymGraph(crosspeaks, False)
+    symgraph.histogram()
 
     # Read in structure
     structure = structures.load_structure(args.structure)
@@ -94,6 +95,9 @@ def main():
     # Add support sets as features of the signatures
     for s in signatures:
         s.options = support[s]
+
+    # Show the percent nailed
+    hmqc.nailed_histogram(signatures, support)
 
     # Write support sets out to output file
     if args.output:
