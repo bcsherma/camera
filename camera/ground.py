@@ -7,6 +7,7 @@ a given set of signatures, noe network, and structure.
 
 import itertools
 import networkx as nx
+from . import params
 
 
 def check_network(network, structure):
@@ -23,14 +24,14 @@ def check_network(network, structure):
     # Iterate over connected components of this graph
 
     for component in nx.connected_component_subgraphs(network):
-        
+
         min_radius = check_component(component, structure)
-    
-        if 10 < min_radius < float("inf"):
+
+        if params.RADIUS < min_radius < float("inf"):
 
             print(f"warning: component cannot satisfy ground truth until "
                   f"{min_radius:.3f} angstroms\n")
-            
+
             for c in component.nodes():
                 print(f"\tnode={c} clusters={c.clusters}")
             print()
@@ -53,13 +54,13 @@ def check_component(component, structure):
 
     # Get the size of the maximum cardinality matching of this component
 
-    max_matching_size = len(nx.max_weight_matching(component, 
-                                                   maxcardinality=True)) 
+    max_matching_size = len(nx.max_weight_matching(component,
+                                                   maxcardinality=True))
 
     # Iterate over all subsets of edges of the component that are the same
     # size as the maximum cardinality matching
 
-    for matching in itertools.combinations(component.edges(), 
+    for matching in itertools.combinations(component.edges(),
                                            max_matching_size):
 
         # Check that this is in fact a matching
@@ -67,13 +68,13 @@ def check_component(component, structure):
         if nx.is_matching(component, matching):
 
             # Use helper to compute the minimum length edge of this matching
-            
+
             minimum = min(minimum, check_matching(matching, structure))
 
     # Return the minimum observed distance for this component
 
     return minimum
-            
+
 
 def check_matching(matching, structure):
     """
@@ -93,24 +94,22 @@ def check_edge(alpha, beta, structure):
     # Set the minimum distance to be infinity
 
     minimum = float("inf")
-    
+
     # Iterate over all possible clusterings of the edge
 
     for alpha_cluster, beta_cluster in itertools.product(alpha.clusters,
                                                          beta.clusters):
 
         # Iterate over all possible assignments of these clusters
-        
+
         for alpha_asg, beta_asg in itertools.product(alpha_cluster.asg,
                                                      beta_cluster.asg):
 
             # If these assignments are not the same, check the distance
 
             if alpha_asg != beta_asg:
-                minimum = min(minimum, 
+                minimum = min(minimum,
                               structure[alpha_asg][beta_asg]["distances"][0])
 
     # Return the minimum
-
     return minimum
-     
