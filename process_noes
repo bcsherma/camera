@@ -82,6 +82,7 @@ def main():
 
     # Construct an NOE network from the given crosspeaks
     symgraph = network.SymGraph(crosspeaks, True)
+    symgraph.histogram()
 
     # Read in structure
     structure = structures.load_structure(args.structure)
@@ -97,6 +98,8 @@ def main():
 
     # Create SAT formula for clustering CSP
     symmetrize.reduce_symmetrization_graph(symgraph, signatures, structure)
+
+    symgraph.histogram()
 
     # Write out NOE CSV file with reciprocal and clusters added
     if args.output:
