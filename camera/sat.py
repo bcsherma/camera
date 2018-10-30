@@ -5,7 +5,9 @@ Library for creating, modifying and solving propositional satisfiability
 formulae for methyl assignment.
 """
 
+import os
 import re
+import uuid
 import tqdm
 import random
 import itertools
@@ -574,13 +576,13 @@ class ClusteringCSP(Formula):
                 base_clause = []
 
                 if network.degree(i) > 1 or network.degree(j) > 1:
-                    base_clause.append(self.activation_variables[i][j])
+                    base_clause.append(-self.activation_variables[i][j])
 
                 if len(i.clusters) > 1:
-                    base_clause.append(self.clustering_variables[i][i_c])
+                    base_clause.append(-self.clustering_variables[i][i_c])
 
                 if len(j.clusters) > 1:
-                    base_clause.append(self.clustering_variables[j][j_c])
+                    base_clause.append(-self.clustering_variables[j][j_c])
 
                 # Call a helper that forces an edge between i_c and j_c to
                 # be respected, conditional on the base clause being
@@ -704,6 +706,53 @@ class IsomorphismCSP(Formula):
 
         self.inject_vertices(graph_h.nodes(), structure)
         self.distance_constraints(graph_h, structure)
+
+    def sample(self, exponent, num_samples):
+        """
+        Run the SPUR weighted sampling code to obtain the desired number of
+        samples. The probability of each satisfying assignment is 1 over the
+        product of the length of the used edges of G, raised to the given
+        exponent
+        """
+
+        # Generate a random filename for the formula and weightfile that will
+        # be used for the sampler
+
+        basename = "/tmp/" + str(uuid.uuid4())
+
+        # Write out the weights file
+
+        with open(basename + ".txt", "w") as weightfile:
+            for variable, cost in self.variable_cost.items():
+                weightfile.write(f"{variable} 1 {cost**-exponent}\n")
+
+        # Write the cnf file out to a temporary file
+
+        self.to_file(basename + ".cnf")
+
+        # Run the sampler
+
+        subprocess.run(f"spur -s {num_samples} -cnf {basename + '.cnf'} "
+                       f"-w {basename + '.txt'} "
+                       f"-out {basename + '.samples'}",
+                       shell=True, stdout=open(os.devnull, "w"))
+
+        # Read in the samples
+
+        with open(basename + ".samples") as file:
+            lines = file.readlines()
+            print(lines)
+            lines = list(filter(lambda x: x.strip(), lines))
+            lines = list(filter(lambda x: x[1] == ",", lines))
+            asgs = list(map(lambda x: x.strip()[2:], lines))
+
+        print(asgs)
+
+        # Delete all the temporary files
+
+        os.remove(basename + ".cnf")
+        os.remove(basename + ".txt")
+        os.remove(basename + ".samples")
 
     def distance_constraints(self, graph_h, structure):
         """
