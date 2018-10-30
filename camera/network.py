@@ -42,14 +42,15 @@ class SignatureGraph(nx.Graph):
         for i, j in living_network.edges():
 
             if living_network.degree(i) == living_network.degree(j) == 1:
-                self.add_edge(clustering[i], clustering[j], geminal=False)
+                self.add_edge(clustering[i], clustering[j], geminal=False,
+                              short=i.short_range)
 
         # Iterate over geminal pairs of signatures and add geminal edges
         # between them
 
         for i, j in itertools.combinations(signatures, 2):
             if i.is_geminal(j):
-                self.add_edge(i, j, geminal=True)
+                self.add_edge(i, j, geminal=True, short=True)
 
 
 class SymGraph(nx.Graph):

@@ -557,6 +557,8 @@ class ClusteringCSP(Formula):
 
         for i, j in network.edges():
 
+            short = i.short_range
+
             # Iterate over clusterings of this edge
 
             for i_c, j_c in itertools.product(i.clusters, j.clusters):
@@ -590,9 +592,10 @@ class ClusteringCSP(Formula):
                 # clustered to i_c and j being clustered to j_c
 
                 self.respect_distance_constraint(i_c, j_c, structure,
-                                                 base_clause)
+                                                 base_clause, short)
 
-    def respect_distance_constraint(self, alpha, beta, structure, base_clause):
+    def respect_distance_constraint(self, alpha, beta, structure, base_clause,
+                                    short):
         """
         Force an edge between alpha and beta (signatures) to be respected,
         conditional on the given base clause being unsatisfiable
@@ -631,7 +634,11 @@ class ClusteringCSP(Formula):
 
                 distance = alpha_neighborhood[beta_methyl]["distances"][0]
 
-                if alpha_methyl.added or beta_methyl.added:
+                if short:
+                    if distance < params.SHORT_RADIUS:
+                        clause.append(beta_table[beta_methyl])
+
+                elif alpha_methyl.added or beta_methyl.added:
                     if distance < params.ADDED_RADIUS:
                         clause.append(beta_table[beta_methyl])
 
@@ -861,7 +868,11 @@ class IsomorphismCSP(Formula):
 
                     within_range = False
 
-                    if i_met.added or j_met.added:
+                    if graph_h[i][j]["short"]:
+                        if distance < params.SHORT_RADIUS:
+                            within_range = True
+
+                    elif i_met.added or j_met.added:
                         if distance < params.ADDED_RADIUS:
                             within_range = True
 

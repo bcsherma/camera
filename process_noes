@@ -32,6 +32,8 @@ def get_args():
                         help="Maximum noe distance")
     parser.add_argument("--added-radius", type=float, default=12.,
                         help="Maximum noe distance for added methyls")
+    parser.added_radius("--short-radius", type=float, default=8.,
+                        help="Maximum distance for short range NOES")
     parser.add_argument("--mcs", type=int, default=3,
                         help="Maximum connected component size of the "
                              "symmetrization graph to use in CSP")
@@ -48,6 +50,7 @@ def get_args():
     # Update globals that are set from command line args
 
     params.RADIUS = args.radius
+    params.SHORT_RADIUS = args.short_radius
     params.ADDED_RADIUS = args.added_radius
     params.MAX_COMP_SIZE = args.mcs
     params.SYM_CTOL, params.SYM_HTOL = args.sym_tol
