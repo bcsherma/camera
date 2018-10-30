@@ -707,6 +707,37 @@ class IsomorphismCSP(Formula):
         self.inject_vertices(graph_h.nodes(), structure)
         self.distance_constraints(graph_h, structure)
 
+    def marginalize(self, exponent, num_samples):
+        """
+        Get an empirical estimate of the marginal probability of each
+        assignment using the SPUR sampler
+        """
+
+        # Get a list of samples
+
+        samples = self.sample(exponent, num_samples)
+
+        # Initialize a table that stores the marginal probability of every
+        # assignment
+
+        marginals = {n: {} for n in self.assignment_variables.keys()}
+
+        # Iterate over the samples and update the marginals
+
+        for sample in samples:
+
+            for vertex, assignment in sample.items():
+
+                if assignment in marginals[vertex]:
+                    marginals[vertex][assignment] += 1/num_samples
+
+                else:
+                    marginals[vertex][assignment] = 1/num_samples
+
+        # Return the marginals and the samples
+
+        return marginals, samples
+
     def sample(self, exponent, num_samples):
         """
         Run the SPUR weighted sampling code to obtain the desired number of
@@ -741,18 +772,42 @@ class IsomorphismCSP(Formula):
 
         with open(basename + ".samples") as file:
             lines = file.readlines()
-            print(lines)
             lines = list(filter(lambda x: x.strip(), lines))
             lines = list(filter(lambda x: x[1] == ",", lines))
-            asgs = list(map(lambda x: x.strip()[2:], lines))
-
-        print(asgs)
+            samples = list(map(lambda x: x.strip()[2:], lines))
+            assignments = self.parse_assignments(samples)
 
         # Delete all the temporary files
 
         os.remove(basename + ".cnf")
         os.remove(basename + ".txt")
         os.remove(basename + ".samples")
+
+        # Return the assignments we sampled
+
+        return assignments
+
+    def parse_assignments(self, samples):
+        """
+        Parse assignments string output by SPUR sampler
+        """
+
+        # Iterate over the samples we collected and parse the assignments.
+        # Each assignment is a mapping from signatures to methyls
+
+        assignments = []
+        for sample in samples:
+            assignment = {}
+            for idx, val in enumerate(sample):
+                if int(val):
+                    vtype, alpha, beta = self.variable_meaning[idx + 1]
+                    if vtype == Formula.ASG_VAR:
+                        assignment[alpha] = beta
+            assignments.append(assignment)
+
+        # Return the list of assignments
+
+        return assignments
 
     def distance_constraints(self, graph_h, structure):
         """
