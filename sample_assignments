@@ -67,6 +67,56 @@ def gibbs_reduce(graph_h, structure, exponent, num_samples):
     repeat until we reach a fixed point
     """
 
+    # Construct an isomorphism CSP from the given graph_h and structure
+
+    formula = sat.IsomorphismCSP(graph_h, structure)
+
+    old_percent_nailed = 0.
+
+    unnailed = {n for n in graph_h.nodes() if not n.nailed()}
+
+    # Loop forever
+
+    while True:
+
+        # Initialize the percent nailed to be zero
+
+        percent_nailed = 0.
+
+        # Run marginalization
+
+        marginals, samples = formula.marginalize(exponent, num_samples)
+
+        for vertex, distribution in marginals.items():
+
+            if vertex not in unnailed:
+                continue
+
+            highest = max(distribution.keys(), key=lambda x: distribution[x])
+
+            if distribution[highest] > 0.95:
+
+                # Increase the percent nailed for this vertex and nail it to
+                # its assignments
+
+                percent_nailed += 1/graph_h.number_of_nodes()
+                options = [m for m in structure.nodes() if m.seqid == highest
+                           and m in formula.assignment_variables[vertex]]
+                formula.add_clause([formula.assignment_variables[vertex][m]
+                                    for m in options])
+                unnailed.remove(vertex)
+
+                print(f"Nailing {vertex} to {options}")
+
+        # If we did not increase the percent nailed from the previous iteration
+        # then stop now
+
+        if percent_nailed == old_percent_nailed:
+            break
+
+        # We increase the percent nailed, so save that progress
+
+        old_percent_nailed = percent_nailed
 
 
 def main():
@@ -118,8 +168,8 @@ def main():
 
         print(f"Running on clustering number {idx + 1}\n")
         graph_h = network.SignatureGraph(signatures, symgraph, clustering)
-        formula = sat.IsomorphismCSP(graph_h, structure)
-        marginals = formula.marginalize(args.exponent, args.num_samples)
+        support = gibbs_reduce(graph_h, structure, args.exponent,
+                               args.num_samples)
 
     # Write support sets out to output file
     if args.output:

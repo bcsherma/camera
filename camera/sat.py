@@ -728,11 +728,11 @@ class IsomorphismCSP(Formula):
 
             for vertex, assignment in sample.items():
 
-                if assignment in marginals[vertex]:
-                    marginals[vertex][assignment] += 1/num_samples
+                if assignment.seqid in marginals[vertex]:
+                    marginals[vertex][assignment.seqid] += 1/num_samples
 
                 else:
-                    marginals[vertex][assignment] = 1/num_samples
+                    marginals[vertex][assignment.seqid] = 1/num_samples
 
         # Return the marginals and the samples
 

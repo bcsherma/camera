@@ -86,6 +86,13 @@ class Signature:
 
         return f"signature-{self.label}"
 
+    def nailed(self):
+        """
+        Return True if my options are a single methyl or a geminal pair
+        """
+
+        return len({m.seqid for m in self.options}) == 1
+
 
 def set_assignment(signatures, structure):
     """
