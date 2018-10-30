@@ -182,10 +182,10 @@ class Formula:
             # Check for whether we are meant to filter by assignment and
             # support sets
 
-            if params.FORCE_SV:
+            if params.FORCE_SV and signature.options:
                 domain = signature.options
 
-            elif params.FORCE_ASG:
+            elif params.FORCE_ASG and signature.asg:
                 domain = signature.asg
 
             else:
@@ -831,7 +831,7 @@ class IsomorphismCSP(Formula):
 
                         self.add_clause([-variable, asgvar[i][i_met]])
                         self.add_clause([-variable, asgvar[j][j_met]])
-                        self.add_clause([variable, -asgvar[j][j_met],
+                        self.add_clause([variable, -asgvar[i][i_met],
                                          -asgvar[j][j_met]])
 
                 # Add the clause to the set of base clauses
