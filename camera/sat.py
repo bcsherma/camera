@@ -401,9 +401,13 @@ class ClusteringCSP(Formula):
         clustervar = self.clustering_variables
 
         for vertex in asgvar.keys():
-            print(len([m for m in asgvar[vertex]
-                       if asgvar[vertex][m] in assignment]))
+            assert len([m for m in asgvar[vertex]
+                        if asgvar[vertex][m] in assignment]) == 1
 
+        for node in clustervar.keys():
+            if clustervar[node]:
+                assert len([s for s in clustervar[node]
+                            if clustervar[node][s] in assignment]) == 1
 
     def enumerate_clusterings(self):
         """

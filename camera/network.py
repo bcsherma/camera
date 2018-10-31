@@ -233,11 +233,11 @@ class SymGraph(nx.Graph):
 
         if self.type == "4D":
             columns = ["label", "c1", "h1", "c2", "h2", "intensity",
-                       "clusters", "reciprocals"]
+                       "clusters", "reciprocals", "short"]
 
         else:
             columns = ["label", "c1", "c2", "h2", "intensity",
-                       "clusters", "reciprocals"]
+                       "clusters", "reciprocals", "short"]
 
         # Write out the CSV file
 
