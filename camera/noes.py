@@ -147,7 +147,7 @@ class Noe:
         """
 
         if self.reciprocals:
-            self.recirpocal_str = [n.label for n in self.reciprocals]
+            self.reciprocal_str = [n.label for n in self.reciprocals]
 
         if self.clusters:
             self.cluster_str = [n.label for n in self.clusters]
