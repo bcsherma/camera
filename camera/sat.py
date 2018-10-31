@@ -404,6 +404,16 @@ class ClusteringCSP(Formula):
             assert len([m for m in asgvar[vertex]
                         if asgvar[vertex][m] in assignment]) == 1
 
+        for i, j in itertools.combinations(asgvar.keys(), 2):
+
+            if not i.is_geminal(j):
+                continue
+
+            i_met = [m for m in asgvar[i] if asgvar[i][m] in assignment][0]
+            j_met = [m for m in asgvar[j] if asgvar[j][m] in assignment][0]
+
+            assert i_met.geminal(j_met)
+
         for node in clustervar.keys():
             if clustervar[node]:
                 assert len([s for s in clustervar[node]
