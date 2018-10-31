@@ -44,9 +44,6 @@ def main():
 
     for short in short_noes:
 
-        if short_sym.degree(short) == 0:
-            continue
-
         # Look for matches in the normal noe list
 
         matches = [n for n in normal_noes if abs(short.c1 - n.c1) < 0.1
