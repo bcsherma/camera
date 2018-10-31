@@ -85,6 +85,7 @@ def main():
 
     # Construct an NOE network from the given crosspeaks
     symgraph = network.SymGraph(crosspeaks, True)
+    symgraph.ignore_geminals(signatures)
     symgraph.histogram()
 
     # Read in structure
