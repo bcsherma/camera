@@ -255,6 +255,9 @@ class Formula:
             for l in group:
                 self.add_clause([cmdr, -l])
 
+            # Make it so that at most one of the literals in the group is true
+            self.at_most_one(group)
+
             idx += 3
 
         # Make it so that at most one of the commanders we created
@@ -267,15 +270,8 @@ class Formula:
         given literals to be True in any satisfying assignment
         """
 
-        # Get negation of every literal
-        negated = [-l for l in lits]
-
-        # Get all pairs of literals negated
-        pairs = list(itertools.combinations(negated, 2))
-
-        # Add all pairs to the formula
-        for l1, l2 in pairs:
-            self.add_clause([l1, l2])
+        for l1, l2 in itertools.combinations(lits, 2):
+            self.add_clause([-l1, -l2])
 
     def to_string(self):
         """
@@ -313,6 +309,10 @@ class Formula:
                                  timeout=15)
 
         assignments = get_assignments(process.stdout)
+
+        if isinstance(self, ClusteringCSP):
+            self.check_assignment(process.stdout)
+
         return [self.variable_meaning[a] for a in assignments if a > 0]
 
 
@@ -385,6 +385,25 @@ class ClusteringCSP(Formula):
         self.respect_matching(network)
         self.distance_constraints(signatures, network, structure)
         self.geminal_constraints(signatures, structure)
+
+    def check_assignment(self, solver_output):
+        """
+        Check that the given assignment satisfies the ground truth
+        """
+
+        assignment = get_assignments(solver_output)
+
+        if not assignment:
+            return
+
+        # Localize the variable tables
+        asgvar = self.assignment_variables
+        clustervar = self.clustering_variables
+
+        for vertex in asgvar.keys():
+            print(len([m for m in asgvar[vertex]
+                       if asgvar[vertex][m] in assignment]))
+
 
     def enumerate_clusterings(self):
         """
