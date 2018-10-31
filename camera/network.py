@@ -204,6 +204,51 @@ class SymGraph(nx.Graph):
                 for i, j in component.edges():
                     self[i][j]["active"] = False
 
+    def ignore_geminals(self, signatures):
+        """
+        Identify geminal NOEs using a given set of signatures and remove
+        all symmetries from those NOEs
+        """
+
+        # Iterate over all pairs of signatures to identify those which are
+        # known to be a geminal pair
+
+        for i, j in itertools.combinations(signatures, 2):
+
+            # If this pair is not geminal, then ignore
+
+            if not i.is_geminal(j):
+                continue
+
+            # Get the coordinates at which we expect to see their NOE
+
+            c1, h1 = i.carbon, i.hydrogen
+            c2, h2 = j.carbon, j.hydrogen
+
+            # Find matches for the geminal NOES between these
+
+            i_rec_matches = [n for n in self.nodes() if abs(n.c1 - c2) < 0.1
+                             and abs(n.c2 - c1) < 0.1
+                             and abs(n.h2 - h1) < 0.01]
+
+            j_rec_matches = [n for n in self.nodes() if abs(n.c1 - c1) < 0.1
+                             and abs(n.c2 - c2) < 0.1
+                             and abs(n.h2 - h2) < 0.01]
+
+            for node in i_rec_matches + j_rec_matches:
+                for neighbor in self.neighbors(node):
+
+                    if self[node][neighbor]["dead"]:
+                        continue
+
+                    print(f"Removing symmetry between {node} and {neighbor} "
+                          f"due to geminality")
+
+                    self[node][neighbor]["active"] = False
+                    self[node][neighbor]["dead"] = True
+
+        print()
+
     def to_csv(self, outfile):
         """
         Output all nodes as rows in a CSV file, where active edges are
