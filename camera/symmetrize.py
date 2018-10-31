@@ -38,8 +38,7 @@ def reduce_symmetrization_graph(network, signatures, structure):
 
         # Print a message about this iteration
 
-        print(f"Beginning iteration number {iteration_no} over "
-              f"components of the symmetrization graph\n")
+        print(f"Beginning iteration number {iteration_no}\n")
 
         # Check for ground truth being respected
 
