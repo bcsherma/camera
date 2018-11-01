@@ -310,9 +310,6 @@ class Formula:
 
         assignments = get_assignments(process.stdout)
 
-        if isinstance(self, ClusteringCSP):
-            self.check_assignment(process.stdout)
-
         return [self.variable_meaning[a] for a in assignments if a > 0]
 
 
@@ -385,39 +382,6 @@ class ClusteringCSP(Formula):
         self.respect_matching(network)
         self.distance_constraints(signatures, network, structure)
         self.geminal_constraints(signatures, structure)
-
-    def check_assignment(self, solver_output):
-        """
-        Check that the given assignment satisfies the ground truth
-        """
-
-        assignment = get_assignments(solver_output)
-
-        if not assignment:
-            return
-
-        # Localize the variable tables
-        asgvar = self.assignment_variables
-        clustervar = self.clustering_variables
-
-        for vertex in asgvar.keys():
-            assert len([m for m in asgvar[vertex]
-                        if asgvar[vertex][m] in assignment]) == 1
-
-        for i, j in itertools.combinations(asgvar.keys(), 2):
-
-            if not i.is_geminal(j):
-                continue
-
-            i_met = [m for m in asgvar[i] if asgvar[i][m] in assignment][0]
-            j_met = [m for m in asgvar[j] if asgvar[j][m] in assignment][0]
-
-            assert i_met.geminal(j_met)
-
-        for node in clustervar.keys():
-            if clustervar[node]:
-                assert len([s for s in clustervar[node]
-                            if clustervar[node][s] in assignment]) == 1
 
     def enumerate_clusterings(self):
         """
