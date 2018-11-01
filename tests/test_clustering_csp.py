@@ -11,11 +11,9 @@ import networkx as nx
 import camera.sat as sat
 import camera.hmqc as hmqc
 import camera.noes as noes
-import camera.ground as ground
 import camera.params as params
 import camera.network as network
 import camera.structures as structures
-import camera.symmetrize as symmetrize
 
 
 class TestClusteringCSP(unittest.TestCase):
