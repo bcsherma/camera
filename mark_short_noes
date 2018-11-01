@@ -8,7 +8,6 @@ CCH file
 import pandas
 import argparse
 import camera.noes as noes
-import camera.network as network
 
 
 def get_args():
