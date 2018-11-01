@@ -38,8 +38,6 @@ def main():
     normal_noes = noes.parse_noe_file(args.cch_300)
     short_noes = noes.parse_noe_file(args.cch_50)
 
-    short_sym = network.SymGraph(short_noes, True)
-
     # Iterate over the list of short noes
 
     for short in short_noes:
@@ -54,8 +52,15 @@ def main():
 
         if len(matches) == 1:
 
-            for m in matches:
-                m.short_range = True
+            match = matches[0]
+
+            print(f"Matching {short} {short.c1:5.3f} {short.c2:5.3f} "
+                  f"{short.h2:5.3f}")
+            print(f"To       {match} {match.c1:5.3f} {match.c2:5.3f} "
+                  f"{match.h2:5.3f}")
+            print()
+
+            match.short_range = True
 
         # If we found no matches, then add this short range NOE to the normal
         # NOE set
