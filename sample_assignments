@@ -97,7 +97,7 @@ def gibbs_reduce(graph_h, structure, exponent, num_samples):
 
             highest = max(distribution.keys(), key=lambda x: distribution[x])
 
-            if distribution[highest] > 0.95:
+            if distribution[highest] > 0.9:
 
                 # Increase the percent nailed for this vertex and nail it to
                 # its assignments
@@ -115,7 +115,8 @@ def gibbs_reduce(graph_h, structure, exponent, num_samples):
         # then stop now
 
         if percent_nailed == old_percent_nailed:
-            break
+            print()
+            return formula.enumerate()
 
         # We increase the percent nailed, so save that progress
 
@@ -166,13 +167,25 @@ def main():
     clusterings = formula.enumerate_clusterings()
     print(f"{len(clusterings)} found\n")
 
+    # Create a list of all the support sets we get
+
+    support_sets = []
+
     # Iterate over the clutserings of the data
     for idx, clustering in enumerate(clusterings):
 
         print(f"Running on clustering number {idx + 1}\n")
         graph_h = network.SignatureGraph(signatures, symgraph, clustering)
-        support = gibbs_reduce(graph_h, structure, args.exponent,
-                               args.num_samples)
+        support_sets.append(gibbs_reduce(graph_h, structure, args.exponent,
+                                         args.num_samples))
+
+    # Set the options of each signature to be the union of its options over
+    # all the support sets we enumerated
+
+    support = {s: set.union(*[sup[s] for sup in support_sets])
+               for s in signatures}
+
+    hmqc.nailed_histogram(signatures, support)
 
     # Write support sets out to output file
     if args.output:
