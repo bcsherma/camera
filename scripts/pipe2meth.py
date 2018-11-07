@@ -86,10 +86,11 @@ def get_args():
                         help="carbon tolerance from duplicate removal")
     parser.add_argument("--htol", type=float, default=0.01,
                         help="hydrogen tolerance from duplicate removal")
+    parser.add_argument("--order", nargs=3, default=["h2", "c1", "c2"])
     return parser.parse_args()
 
 
-def parse_pipe(fname, order=["h2", "c2", "c1"]):
+def parse_pipe(fname, order=["h2", "c1", "c2"]):
     """Parse the important parts from a pipe file"""
 
     w1, w2, w3 = order  # get the order of axes
@@ -140,7 +141,7 @@ def parse_pipe(fname, order=["h2", "c2", "c1"]):
 def main():
     """Main method for the script"""
     args = get_args()  # get command line arguments
-    peaks = parse_pipe(args.peaklist)
+    peaks = parse_pipe(args.peaklist, order=args.order)
     print(f"collected {len(peaks)} from table")
 
     final_list = []
