@@ -7,6 +7,7 @@ and a structure, sample from the space of all satisfying assignments
 """
 
 import argparse
+import itertools
 import camera.sat as sat
 import camera.hmqc as hmqc
 import camera.noes as noes
@@ -89,6 +90,7 @@ def gibbs_reduce(graph_h, structure, exponent, num_samples):
         # Run marginalization
 
         marginals, samples = formula.marginalize(exponent, num_samples)
+        # correlate_assignments(formula, marginals, samples)
 
         for vertex, distribution in marginals.items():
 
@@ -121,6 +123,61 @@ def gibbs_reduce(graph_h, structure, exponent, num_samples):
         # We increase the percent nailed, so save that progress
 
         old_percent_nailed = percent_nailed
+
+
+def correlate_assignments(formula, marginals, samples):
+    """
+    Iterate over all pairs of vertex assignments. If the probability of a pair
+    co-occuring deviates significantly from the product of the marginal
+    probability of those assignments, then place a hard constraint forcing
+    the assignments to be either logically equivalent or mutually exclusive.
+    """
+
+    # Iterate over all pairs of signatures
+
+    for sig1, sig2 in itertools.combinations(marginals.keys(), 2):
+
+        # If these are a geminal pair, ignore
+
+        if sig1.is_geminal(sig2):
+            continue
+
+        # If either of these are nailed, ignore
+
+        if len(marginals[sig1]) == 1 or len(marginals[sig2]) == 1:
+            continue
+
+        # Iterate over all pairs of assignments between these two
+
+        for m1_id, m2_id in itertools.product(marginals[sig1].keys(),
+                                              marginals[sig2].keys()):
+
+            # Get the methyls with this id
+            # m1_met = [m for m in ]
+
+            # If these are the same methyl, ignore
+
+            if m1_id == m2_id:
+                continue
+
+            # Get the product of the marginal probability of sig1 -> m1 and
+            # sig2 -> m2
+
+            independent_prob = marginals[sig1][m1_id] * marginals[sig2][m2_id]
+
+            # Count the fraction of samples in which these assignments co-occur
+
+            real_prob = 0
+            for sample in samples:
+
+                if sample[sig1].seqid == m1_id and sample[sig2].seqid == m2_id:
+                    real_prob += 1/len(samples)
+
+            if real_prob > 10*independent_prob:
+                print(sig1, m1_id, sig2, m2_id)
+
+            elif real_prob*10 < independent_prob:
+                print("*", sig1, m1_id, sig2, m2_id)
 
 
 def main():
