@@ -8,6 +8,7 @@ CCH file
 import pandas
 import argparse
 import camera.noes as noes
+import camera.network as network
 
 
 def get_args():
@@ -37,9 +38,14 @@ def main():
     normal_noes = noes.parse_noe_file(args.cch_300)
     short_noes = noes.parse_noe_file(args.cch_50)
 
+    short_sym = network.SymGraph(short_noes, True)
+
     # Iterate over the list of short noes
 
     for short in short_noes:
+
+        if short_sym.degree(short) < 1:
+            continue
 
         # Look for matches in the normal noe list
 
