@@ -124,7 +124,7 @@ def main():
     print("classified", num_classified, "geminal connectivities")
 
     if args.output:
-        hmqc.write_output(signatures, args.output)
+        hmqc.to_csv(signatures, args.output)
 
 
 # run main method
