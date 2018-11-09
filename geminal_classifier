@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""
+geminals:
+
+Assign hmqc pairs to be geminal or not based on a set of NOEs
+"""
+
+import argparse
+import camera.hmqc as hmqc
+import camera.noes as noes
+import camera.params as params
+import camera.network as network
+
+
+def get_args():
+    """
+    Parse command line arguments
+    """
+
+    # Create a command line argument parser and add arguments to it
+    parser = argparse.ArgumentParser(description=__doc__.strip())
+    parser.add_argument("hmqc", help="2D peak list (.csv)")
+    parser.add_argument("noes", help="NOE spreadsheet (.csv)")
+    parser.add_argument("--sym-tol", nargs=2, type=float,
+                        default=[0.15, 0.02], help="symmetry tolerances")
+    parser.add_argument("--clustering-tol", nargs=2, type=float,
+                        default=[0.15, 0.02], help="clustering tolerances")
+    parser.add_argument("-o", "--output", help="Output NOE .csv file")
+
+    args = parser.parse_args()
+
+    # Update globals that are set from command line args
+
+    params.SYM_CTOL, params.SYM_HTOL = args.sym_tol
+    params.CLS_CTOL, params.CLS_HTOL = args.clustering_tol
+
+    # Return the command line argument namespace
+    return args
+
+
+def main():
+    """Main method for the script"""
+
+    # Parse command line arguments
+    args = get_args()
+
+    # Read in list of HMQC signatures
+    signatures = hmqc.parse_hmqc_file(args.hmqc)
+
+    # Read in list of NOEs
+    crosspeaks = noes.parse_noe_file(args.noes)
+
+    # Get possible clusters for each crosspeak
+    noes.set_clusters(crosspeaks, signatures)
+    noes.set_reciprocals(crosspeaks)
+
+    # Ignore any unclusterable crosspeaks
+    crosspeaks = [c for c in crosspeaks if c.clusters]
+
+    # Construct an NOE network from the given crosspeaks
+    symgraph = network.SymGraph(crosspeaks, True)
+    # symgraph.ignore_geminals(signatures)
+    symgraph.histogram()
+    symgraph.set_activity_level(2)
+
+    # Get the active portion of the symmetrization graph
+    active = symgraph.active_graph()
+
+    num_classified = 0
+
+    # iterate over all uniquely symmetric edges
+    for i, j in active.edges():
+
+        # If either of the NOEs have no intensity, continue
+
+        if not i.intensity or not j.intensity:
+            continue
+
+        # check that these cluster uniquely
+        isig = i.clusters
+        jsig = j.clusters
+
+        if len(isig) > 1 or len(jsig) > 1:
+            continue
+
+        # get the unique clustering
+        isig = list(isig)[0]
+        jsig = list(jsig)[0]
+
+        # if the colors don't intersect, ignore
+        if not set(isig.color) & set(jsig.color):
+            continue
+
+        # if the colors dont intersect on L, V, move on
+        if not set(isig.color) & set(jsig.color) <= {"L", "V"}:
+            continue
+
+        # check if these are the max intensity in their clusters
+        imax = i.intensity == max([n.intensity for n in active.nodes()
+                                   if isig in n.clusters])
+        jmax = j.intensity == max([n.intensity for n in active.nodes()
+                                   if jsig in n.clusters])
+
+        if imax and jmax:
+
+            print(f"classifying {isig} & {jsig} as geminal... ", end="")
+
+            if isig.geminal or jsig.geminal:
+
+                if not isig.is_geminal(jsig):
+                    print("wrong according to assignments")
+
+                else:
+                    print("correct according to assignments")
+            else:
+                print()
+
+            # Make these geminal
+
+            isig.geminal = jsig
+            jsig.geminal = isig
+            num_classified += 1
+
+    print("classified", num_classified, "geminal connectivities")
+
+    if args.output:
+        hmqc.write_output(signatures, args.output)
+
+
+# run main method
+if __name__ == "__main__":
+    main()
