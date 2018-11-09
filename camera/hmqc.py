@@ -54,10 +54,16 @@ class Signature:
         Convert self into dictionary
         """
 
+        if self.asg:
+            self.asg_str = " ".join([m.label for m in self.asg])
+
+        if self.options:
+            self.option_str = " ".join([m.label for m in self.options])
+
         return {"label": self.label,
                 "color": "".join(sorted(self.color)),
-                "assignment": " ".join([m.label for m in self.asg]),
-                "options": " ".join([m.label for m in self.options]),
+                "assignment": " ".join(self.asg_str),
+                "options": " ".join(self.option_str),
                 "carbon": f"{self.carbon:.3f}",
                 "hydrogen": f"{self.hydrogen:.3f}",
                 "geminal": self.geminal.label if self.geminal else ""}
