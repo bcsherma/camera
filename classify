@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""
+Run the color classifier on an hmqc spreadsheet
+
+If there are color assignments present, the script will display any
+discrepancies between the given colors and the classifier colors
+"""
+
+import os
+import argparse
+import numpy as np
+import camera.hmqc as hmqc
+
+
+def read_histogram(fname: str) -> list:
+    """
+    read a methyl signature histogram given its filename. Return a
+    tuple of the form c2,h2,frequency
+    """
+
+    # read file
+    lines = [l for l in open(fname).readlines() if l.strip()]
+
+    # convert into tuple of floats
+    return [tuple(map(float, l.split())) for l in lines]
+
+
+# Define set of colors that we are interested in
+
+COL = ["A", "I", "L", "M", "V"]
+
+# Get path to this script
+
+MY_PATH = os.path.realpath(__file__)
+BASE = os.path.split(MY_PATH)[0]
+
+# Hash map from methyl types to their histogram files
+
+TFILES = {
+    'A': ["histograms/ALA_CB-HB_correlated_2Dhist.smoothed.txt"],
+    'I': ["histograms/ILE_CD1-HD1_correlated_2Dhist.smoothed.txt"],
+    'L': ["histograms/LEU_CD1-HD1_correlated_2Dhist.smoothed.txt",
+          "histograms/LEU_CD2-HD2_correlated_2Dhist.smoothed.txt"
+          ],
+    'M': ["histograms/MET_CE-HE_correlated_2Dhist.smoothed.txt"],
+    'V': ["histograms/VAL_CG1-HG1_correlated_2Dhist.smoothed.txt",
+          "histograms/VAL_CG2-HG2_correlated_2Dhist.smoothed.txt"
+          ]
+    }
+
+TFILES = {t: [os.path.join(BASE, l) for l in TFILES[t]] for t in TFILES}
+
+# define all bins
+MIN_H = -2.98
+MAX_H = 6
+H_STEP = 0.1
+
+H_RANGE = np.arange(MIN_H, MAX_H, H_STEP)
+
+MIN_C = 10.1
+MAX_C = 40
+C_STEP = 0.5
+
+C_RANGE = np.arange(MIN_C, MAX_C, C_STEP)
+
+# create the classifier
+CLASSIFIER = [[{col: 0. for col in COL} for c in C_RANGE] for h in H_RANGE]
+
+# iterate over the desired colors
+for col in COL:
+
+    # iterate over the histograms needed to this file
+    for f in TFILES[col]:
+
+        # iterate over entries of this histogram
+        for h, c, freq in read_histogram(f):
+
+            h_bin = int((h - MIN_H)/H_STEP)
+            c_bin = int((c - MIN_C)/C_STEP)
+
+            CLASSIFIER[h_bin][c_bin][col] += freq
+
+
+def classify(carbon, hydrogen, confidence, colors):
+    """
+    Run the color classifier with given confidence on the given coordinates
+    restricted to the given color options
+    """
+
+    c_idx = int((carbon - MIN_C)/C_STEP)
+    h_idx = int((hydrogen - MIN_H)/H_STEP)
+
+    histogram = CLASSIFIER[h_idx][c_idx].copy()
+
+    mass = sum([histogram[k] for k in histogram.keys()])
+    keys_by_weight = sorted(histogram.keys(), key=lambda x: histogram[x],
+                            reverse=True)
+
+    total = 0.
+    output = []
+
+    for k in keys_by_weight:
+        total += histogram[k]/mass
+        output.append(k)
+        if total > confidence:
+            return sorted(output)
+
+
+def get_args():
+    """
+    Get command line arguments
+    """
+
+    # create argument parser
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    # add arguments to the parser
+    parser.add_argument("hmqc", help="2D hmqc spreadsheet (.csv)")
+    parser.add_argument("-c", "--confidence", type=float, default=0.95,
+                        help="desired classifier confidence")
+    parser.add_argument("--options", default="ILV", help="color options "
+                        "given as a string [AILVM]+")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="overwrite given colors")
+    parser.add_argument("-o", "--output", help="output file (.csv)")
+
+    return parser.parse_args()
+
+
+def main():
+    """
+    Main method for the script
+    """
+
+    # Get command line arguments
+
+    args = get_args()
+
+    # Read in hmqc peaks
+
+    signatures = hmqc.parse_hmqc_file(args.hmqc)
+
+    # Iterate over the signatures
+
+    for s in signatures:
+
+        c = classify(s.carbon, s.hydrogen, args.confidence,
+                     args.options.split())
+
+        if s.color:
+            if args.overwrite:
+
+                real = s.color
+                s.color = c
+
+                if not set(real) & set(s.color):
+                    print(f"WARNING! Missing known color for {s}")
+                    print(f"Given colors: {''.join(real)} === Classifer: "
+                          f"{''.join(c)}")
+
+        else:
+            s.color = c
+
+
+    if args.output:  # write output if asked to
+        hmqc.to_csv(signatures, args.output)
+
+
+# run the main method
+if __name__ == "__main__":
+    main()
