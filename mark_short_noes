@@ -83,7 +83,7 @@ def main():
             noe_dicts = [n.to_dict() for n in normal_noes]
             csv = pandas.DataFrame(noe_dicts)
             columns = ["label", "c1", "c2", "h2", "cluster", "reciprocals",
-                       "short"]
+                       "short", "intensity"]
 
             if not [n for n in normal_noes if n.reciprocal_str]:
                 columns.remove("reciprocals")
