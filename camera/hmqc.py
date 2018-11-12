@@ -31,7 +31,7 @@ class Signature:
         self.label = source["label"]
         self.carbon = source["carbon"]
         self.hydrogen = source["hydrogen"]
-        self.color = source.get("color", "").split()
+        self.color = list(source.get("color", ""))
         self.asg_str = source.get("assignment", "").split()
         self.option_str = source.get("options", "").split()
         self.geminal_str = source.get("geminal", "")
