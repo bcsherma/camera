@@ -204,5 +204,14 @@ def parse_hmqc_file(filename):
             i.geminal = j
             j.geminal = i
 
+    # Print out a histogram of the number of types
+
+    print()
+    type = ["".join(sorted(s.color)) for s in signatures]
+    all_types = set(type)
+
+    for t in sorted(all_types):
+        print(f"Read {type.count(t)} signatures of color {t}")
+
     print()
     return signatures
