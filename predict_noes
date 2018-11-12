@@ -72,12 +72,27 @@ def main():
         atom_map = structures.get_atoms(f, args.colors, args.model,
                                         args.chain)
 
+        # If we are asked to predict cross chain NOES, do so
+        if args.cross:
+            cross_map = structures.get_atoms(f, args.colors, args.model,
+                                             args.cross)
+
         # Iterate over all pairs of methyls
         for i, j in itertools.combinations(methyls, 2):
 
             # Get distance between these
             d = structures.pairwise_distance(atom_map[i.label],
                                              atom_map[j.label])
+
+            if args.cross:
+
+                main_i = atom_map[i.label]
+                main_j = atom_map[j.label]
+                cross_i = cross_map[i.label]
+                cross_j = cross_map[j.label]
+
+                d = min([d, structures.pairwise_distance(main_i, cross_j),
+                         structures.pairwise_distance(cross_i, main_j)])
 
             # Save these distances in table
             distances[i][j].append(d)
