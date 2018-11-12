@@ -55,10 +55,10 @@ class Signature:
         """
 
         if self.asg:
-            self.asg_str = " ".join([m.label for m in self.asg])
+            self.asg_str = [m.label for m in self.asg]
 
         if self.options:
-            self.option_str = " ".join([m.label for m in self.options])
+            self.option_str = [m.label for m in self.options]
 
         return {"label": self.label,
                 "color": "".join(sorted(self.color)),
@@ -127,8 +127,8 @@ def to_csv(signatures, outfile):
 
     dictionaries = [s.to_dict() for s in signatures]
     csv = pandas.DataFrame(dictionaries)
-    csv.to_csv(outfile, columns=["label", "color", "assignment", "options",
-                                 "geminal", "carbon", "hydrogen"], index=False)
+    csv.to_csv(outfile, columns=["label", "color", "assignment", "geminal",
+                                 "carbon", "hydrogen", "options"], index=False)
 
 
 def nailed_histogram(signatures, support=None):
