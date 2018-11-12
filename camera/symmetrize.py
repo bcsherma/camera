@@ -30,6 +30,12 @@ def reduce_symmetrization_graph(network, signatures, structure):
     # are part of a maximum cardinality matching in which the problem is
     # satisfiable
 
+    # Check that the base problem is SAT, and return false otherwise
+
+    if not checksat(network, signatures, structure):
+        print("ERROR! Cannot fit network to structure")
+        exit(1)
+
     # Save how many edges are in the active part of the sym graph
     active_edges = len(network.active_graph().edges())
 
