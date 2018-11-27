@@ -227,6 +227,60 @@ def get_atoms(filename: str, colors: list, model: int, chain: str) -> list:
     return atom_map
 
 
+def get_carbon_atoms(filename, colors, model, chain):
+    """
+    Return a mapping from methyl labels to carbon atoms
+    """
+
+    # Get residues from the given structure model and chain
+    residues = get_residues(filename, model, chain)
+
+    # Initialize empty dictionary
+    atom_map = {}
+
+    # Iterate over the residues
+    for res in residues:
+
+        # get color of this methyl
+        color = res.get_resname()
+
+        # If this res does not have desired color, ignore
+        if color not in colors:
+            continue
+
+        # Get the sequence id of this residue
+        seqid = res.get_id()[1]
+
+        # Get first letter of color
+        c = color[0]
+
+        # Extract the appropriate atoms for methyls of any color
+        if color == "LEU":
+            atom_map[f"{c}{seqid}.1"] = [a for a in res if 'CD1' in a.id]
+            atom_map[f"{c}{seqid}.2"] = [a for a in res if 'CD2' in a.id]
+
+        elif color == "VAL":
+            atom_map[f"{c}{seqid}.1"] = [a for a in res if 'CG1' in a.id]
+            atom_map[f"{c}{seqid}.2"] = [a for a in res if 'CG2' in a.id]
+
+        elif color == "ALA":
+            atom_map[f"{c}{seqid}"] = [a for a in res if 'CB' in a.id]
+
+        elif color == "ILE":
+            atom_map[f"{c}{seqid}"] = [a for a in res if 'CD1' in a.id]
+
+        elif color == "MET":
+            atom_map[f"{c}{seqid}"] = [a for a in res if 'CE' in a.id]
+
+    # Make sure we got one carbon atom per entry
+    for a in atom_map.keys():
+        assert len(atom_map[a]) == 1
+    atom_map = {a: atom_map[a][0] for a in atom_map.keys()}
+
+    # return mapping from methyl names to their atoms
+    return atom_map
+
+
 def pairwise_distance(triplet1, triplet2):
     """
     Takes two triplets of hydrogen atoms and returns the average pairwise
