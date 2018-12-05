@@ -83,14 +83,14 @@ def gibbs_reduce(graph_h, structure, exponent, num_samples):
 
     while True:
 
-        # Initialize the percent nailed to be zero
+        # Initialize the percent nailed to be zero.
 
         percent_nailed = 0.
 
-        # Run marginalization
+        # Run marginalization.
 
         marginals, samples = formula.marginalize(exponent, num_samples)
-        # correlate_assignments(formula, marginals, samples)
+        correlate_assignments(formula, marginals, samples)
 
         for vertex, distribution in marginals.items():
 
@@ -133,35 +133,36 @@ def correlate_assignments(formula, marginals, samples):
     the assignments to be either logically equivalent or mutually exclusive.
     """
 
+    # Localize the formula's assignment variable table.
+
+    asgvar = formula.assignment_variables
+
     # Iterate over all pairs of signatures
 
     for sig1, sig2 in itertools.combinations(marginals.keys(), 2):
 
-        # If these are a geminal pair, ignore
+        # If these are a geminal pair, ignore.
 
         if sig1.is_geminal(sig2):
             continue
 
-        # If either of these are nailed, ignore
+        # If either of these are nailed, ignore.
 
         if len(marginals[sig1]) == 1 or len(marginals[sig2]) == 1:
             continue
 
-        # Iterate over all pairs of assignments between these two
+        # Iterate over all pairs of assignments between these two.
 
         for m1_id, m2_id in itertools.product(marginals[sig1].keys(),
                                               marginals[sig2].keys()):
 
-            # Get the methyls with this id
-            # m1_met = [m for m in ]
-
-            # If these are the same methyl, ignore
+            # If these are the same methyl, ignore.
 
             if m1_id == m2_id:
                 continue
 
             # Get the product of the marginal probability of sig1 -> m1 and
-            # sig2 -> m2
+            # sig2 -> m2.
 
             independent_prob = marginals[sig1][m1_id] * marginals[sig2][m2_id]
 
@@ -173,11 +174,29 @@ def correlate_assignments(formula, marginals, samples):
                 if sample[sig1].seqid == m1_id and sample[sig2].seqid == m2_id:
                     real_prob += 1/len(samples)
 
+            # Get the methyls with the given sequence IDs.
+
+            m1s = [m for m in asgvar[sig1].keys() if m.seqid == m1_id]
+
+            m2s = [m for m in asgvar[sig2].keys() if m.seqid == m2_id]
+
             if real_prob > 10*independent_prob:
-                print(sig1, m1_id, sig2, m2_id)
+
+                for m1 in m1s:
+                    clause = [-1*asgvar[sig1][m1]]
+                    for m2 in m2s:
+                        clause.append(asgvar[sig2][m2])
+                    formula.add_clause(clause)
+
+                for m2 in m2s:
+                    clause = [-1*asgvar[sig2][m2]]
+                    for m1 in m1s:
+                        clause.append(asgvar[sig1][m1])
+                    formula.add_clause(clause)
 
             elif real_prob*10 < independent_prob:
-                print("*", sig1, m1_id, sig2, m2_id)
+                for m1, m2 in itertools.product(m1s, m2s):
+                    formula.add_clause([-asgvar[sig1][m1], -asgvar[sig2][m2]])
 
 
 def main():
