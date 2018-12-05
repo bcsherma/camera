@@ -194,7 +194,8 @@ def main():
     output_dic = {"size": structure.number_of_nodes(),
                   "sat_time": sat_rt, "sat_nailed": sat_pn,
                   "sample_time": sample_rt, "sample_nailed": sample_pn,
-                  "sample_mistakes": sample_mistakes}
+                  "sample_mistakes": sample_mistakes,
+                  "trials": args.trials, "p": args.observation_probability}
 
     if args.output:
         with open(args.output, "w") as outf:
