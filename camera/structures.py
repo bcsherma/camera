@@ -130,7 +130,6 @@ def get_residues(filename: str, model: int, chain: str):
     if model not in [m.id for m in models]:
         print(f"desired model '{model}' not available in file {filename}")
         print(f"available models: {sorted(m.id for m in models)}")
-        exit(1)
 
     chains = models[model]  # Get all chains in the model
 
@@ -138,7 +137,12 @@ def get_residues(filename: str, model: int, chain: str):
     if chain not in [c.id for c in chains]:
         print(f"desired chain '{chain}' not available in file {filename}")
         print(f"available chain: {sorted(c.id for c in chains)}")
-        exit(1)
+
+        # Use the alphabetically first chain by default
+
+        chain = list(sorted(c.id for c in chains))[0]
+
+        print(f"Using chain {chain} by default")
 
     # get the resideues in chain
     return chains[chain].get_residues()
