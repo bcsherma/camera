@@ -9,15 +9,14 @@ pair of methyl labels, and each entry indicates that the pair of methyls
 listed experienced an NOE.
 """
 
-import sys
 import json
 import time
 import random
 import argparse
-import numpy as np
 import networkx as nx
 import camera.sat as sat
 import camera.hmqc as hmqc
+import camera.params as params
 import camera.structures as structures
 
 
@@ -69,6 +68,9 @@ class Vertex:
             return False
         return self.label == other.label
 
+    def __repr__(self):
+        return self.label
+
     def nailed(self):
         """
         Return true if you have a non-empty set of options and your options
@@ -89,11 +91,13 @@ def get_args():
     parser.add_argument("-r", "--radius", type=float, default=10,
                         help="maximum NOE distance")
     parser.add_argument("-p", "--observation-probability", type=float,
-                        default=0.3, help="probability of removing an NOE")
+                        default=0.25, help="probability of removing an NOE")
     parser.add_argument("-o", "--output",
                         help="output file")
     parser.add_argument("-t", "--trials", type=int, default=10,
                         help="number of trials")
+
+    params.FORCE_SV = True
 
     return parser.parse_args()
 
@@ -117,12 +121,19 @@ def main():
 
     # Initialize the fields we care about.
 
-    runtimes = []
-    nailed_percentages = []
+    sat_rt = []
+    sample_rt = []
+
+    sat_pn = []
+    sample_pn = []
+
+    sample_mistakes = []
 
     # Run the simulation X number of times
 
     for i in range(args.trials):
+
+        print(f"\nRUNNING TRIAL {i + 1}\n")
 
         # Create graph.
 
@@ -138,26 +149,52 @@ def main():
                     simgraph.add_edge(vertex_map[m], vertex_map[n],
                                       short=False)
 
-        # Create CSP and run
+        # Create CSP and run.
+
         t = time.time()
 
-        formula = sat.IsomorphismCSP(simgraph, structure)
+        formula = sat.IsomorphismCSP(simgraph, structure, edge_variables=False)
 
         support = formula.enumerate()
         hmqc.nailed_histogram(vertices, support)
 
-        runtime = time.time() - t
+        sat_time = time.time() - t
         nailed = len([v for v in vertices
                       if len({m.seqid for m in support[v]}) == 1])
         percent_nailed = nailed/len(vertices)
 
-        runtimes.append(runtime)
-        nailed_percentages.append(percent_nailed)
+        for v in vertices:
+            v.options = support[v]
+
+        formula = sat.IsomorphismCSP(simgraph, structure)
+
+        sat_rt.append(sat_time)
+        sat_pn.append(percent_nailed)
+
+        t = time.time()
+        support = sat.gibbs_reduce(simgraph, structure, 1, 1000)
+        hmqc.nailed_histogram(vertices, support)
+
+        sample_time = time.time() - t
+        nailed = len([v for v in vertices
+                      if len({m.seqid for m in support[v]}) == 1])
+        percent_nailed = nailed/len(vertices)
+
+        sample_rt.append(sample_time)
+        sample_pn.append(percent_nailed)
+        sample_mistakes.append(len([v for v in vertices
+                                    if v.label not in
+                                    [m.label for m in support[v]]]))
+
+        for v in vertices:
+            v.options = []
 
     # Write out the final output
 
-    output_dic = {"size": structure.number_of_nodes(), "time": np.mean(runtimes),
-                  "nailed": np.mean(nailed_percentages)}
+    output_dic = {"size": structure.number_of_nodes(),
+                  "sat_time": sat_rt, "sat_nailed": sat_pn,
+                  "sample_time": sample_rt, "sample_nailed": sample_pn,
+                  "sample_mistakes": sample_mistakes}
 
     if args.output:
         with open(args.output, "w") as outf:

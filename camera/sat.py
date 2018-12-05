@@ -683,7 +683,7 @@ class IsomorphismCSP(Formula):
     clustering or symmetrization
     """
 
-    def __init__(self, graph_h, structure):
+    def __init__(self, graph_h, structure, edge_variables=True):
         """
         Construct an instance of the subgraph isomorphism csp, first
         calling the super class constructor
@@ -692,6 +692,11 @@ class IsomorphismCSP(Formula):
         # Call super class constructor to set up fundamental methods and fields
 
         Formula.__init__(self)
+
+        # If edge_variables is set to False, we do not create variables for
+        # the edge assignments and we do not allow for sampling.
+
+        self.edge_vars = edge_variables
 
         # Set up variable tables.
         #
@@ -749,6 +754,10 @@ class IsomorphismCSP(Formula):
         product of the length of the used edges of G, raised to the given
         exponent
         """
+
+        # Assert that we have created edge variables
+
+        assert self.edge_vars
 
         # Generate a random filename for the formula and weightfile that will
         # be used for the sampler
@@ -879,6 +888,9 @@ class IsomorphismCSP(Formula):
                     if within_range:
 
                         clause.append(asgvar[j][j_met])
+
+                        if not self.edge_vars:
+                            continue
 
                         # Create a variable which represents that (i,j) is
                         # mapped to i_map, j_map
