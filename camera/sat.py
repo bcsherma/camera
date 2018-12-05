@@ -900,3 +900,137 @@ class IsomorphismCSP(Formula):
                 # Add the clause to the set of base clauses
 
                 self.add_clause(clause)
+
+
+def gibbs_reduce(graph_h, structure, exponent, num_samples):
+    """
+    Sample from the gibbs distribution and rerun enumeration, then rinse and
+    repeat until we reach a fixed point
+    """
+
+    # Construct an isomorphism CSP from the given graph_h and structure
+
+    formula = IsomorphismCSP(graph_h, structure)
+
+    old_percent_nailed = 0.
+
+    unnailed = {n for n in graph_h.nodes() if not n.nailed()}
+
+    # Loop forever
+
+    while True:
+
+        # Initialize the percent nailed to be zero.
+
+        percent_nailed = 0.
+
+        # Run marginalization.
+
+        marginals, samples = formula.marginalize(exponent, num_samples)
+        correlate_assignments(formula, marginals, samples)
+
+        for vertex, distribution in marginals.items():
+
+            if vertex not in unnailed:
+                continue
+
+            highest = max(distribution.keys(), key=lambda x: distribution[x])
+
+            if distribution[highest] > 0.9:
+
+                # Increase the percent nailed for this vertex and nail it to
+                # its assignments
+
+                percent_nailed += 1/graph_h.number_of_nodes()
+                options = [m for m in structure.nodes() if m.seqid == highest
+                           and m in formula.assignment_variables[vertex]]
+                formula.add_clause([formula.assignment_variables[vertex][m]
+                                    for m in options])
+                unnailed.remove(vertex)
+
+                print(f"Nailing {vertex} to {options}")
+
+        # If we did not increase the percent nailed from the previous iteration
+        # then stop now
+
+        if percent_nailed == old_percent_nailed:
+            print()
+            return formula.enumerate()
+
+        # We increase the percent nailed, so save that progress
+
+        old_percent_nailed = percent_nailed
+
+
+def correlate_assignments(formula, marginals, samples):
+    """
+    Iterate over all pairs of vertex assignments. If the probability of a pair
+    co-occuring deviates significantly from the product of the marginal
+    probability of those assignments, then place a hard constraint forcing
+    the assignments to be either logically equivalent or mutually exclusive.
+    """
+
+    # Localize the formula's assignment variable table.
+
+    asgvar = formula.assignment_variables
+
+    # Iterate over all pairs of signatures
+
+    for sig1, sig2 in itertools.combinations(marginals.keys(), 2):
+
+        # If these are a geminal pair, ignore.
+
+        if sig1.is_geminal(sig2):
+            continue
+
+        # If either of these are nailed, ignore.
+
+        if len(marginals[sig1]) == 1 or len(marginals[sig2]) == 1:
+            continue
+
+        # Iterate over all pairs of assignments between these two.
+
+        for m1_id, m2_id in itertools.product(marginals[sig1].keys(),
+                                              marginals[sig2].keys()):
+
+            # If these are the same methyl, ignore.
+
+            if m1_id == m2_id:
+                continue
+
+            # Get the product of the marginal probability of sig1 -> m1 and
+            # sig2 -> m2.
+
+            independent_prob = marginals[sig1][m1_id] * marginals[sig2][m2_id]
+
+            # Count the fraction of samples in which these assignments co-occur
+
+            real_prob = 0
+            for sample in samples:
+
+                if sample[sig1].seqid == m1_id and sample[sig2].seqid == m2_id:
+                    real_prob += 1/len(samples)
+
+            # Get the methyls with the given sequence IDs.
+
+            m1s = [m for m in asgvar[sig1].keys() if m.seqid == m1_id]
+
+            m2s = [m for m in asgvar[sig2].keys() if m.seqid == m2_id]
+
+            if real_prob > 10*independent_prob:
+
+                for m1 in m1s:
+                    clause = [-1*asgvar[sig1][m1]]
+                    for m2 in m2s:
+                        clause.append(asgvar[sig2][m2])
+                    formula.add_clause(clause)
+
+                for m2 in m2s:
+                    clause = [-1*asgvar[sig2][m2]]
+                    for m1 in m1s:
+                        clause.append(asgvar[sig1][m1])
+                    formula.add_clause(clause)
+
+            elif real_prob*10 < independent_prob:
+                for m1, m2 in itertools.product(m1s, m2s):
+                    formula.add_clause([-asgvar[sig1][m1], -asgvar[sig2][m2]])
